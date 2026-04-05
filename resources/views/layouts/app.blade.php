@@ -145,7 +145,16 @@ function previewAndSubmit(input) {
     }
 }
 
-function removeStyle() {
+function deleteReference(id) {
+        if (confirm("Delete this reference image?")) {
+            fetch("/upload/reference/" + id, {
+                method: "DELETE",
+                headers: {"X-CSRF-TOKEN": document.querySelector("input[name=_token]").value}
+            }).then(r => location.reload());
+        }
+    }
+
+    function removeStyle() {
     if (confirm("Remove visual style image?")) {
         // Could add delete endpoint here
         location.reload();

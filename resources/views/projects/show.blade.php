@@ -72,39 +72,57 @@
                 <!-- Canon Entries Tab -->
                 <div class="canon-tab-content active" id="canon-entries">
                     <div class="canon-list">
-                        <div class="canon-entry" data-id="1900001">
-                            <span class="canon-icon">⚡</span>
+                        @forelse($canon as $entry)
+                        <div class="canon-entry" data-id="{{ $entry->id }}">
+                            <span class="canon-icon">
+                                @switch($entry->type)
+                                    @case('event')⚡@break
+                                    @case('character')😈@break
+                                    @case('location')📍@break
+                                    @case('artifact')💎@break
+                                    @default📜
+                                @endswitch
+                            </span>
                             <div class="canon-content">
-                                <h4>The Lightning Strike</h4>
-                                <p class="type-badge">event</p>
+                                <h4>{{ $entry->title }}</h4>
+                                <span class="type-badge">{{ $entry->type }}</span>
                             </div>
                         </div>
-                        <div class="canon-entry" data-id="1900002">
-                            <span class="canon-icon">📜</span>
-                            <div class="canon-content">
-                                <h4>Power Level System</h4>
-                                <p class="type-badge">rule</p>
-                            </div>
-                        </div>
-                        <div class="canon-entry" data-id="1900003">
-                            <span class="canon-icon">😈</span>
-                            <div class="canon-content">
-                                <h4>The Shadow King</h4>
-                                <p class="type-badge">character</p>
-                            </div>
-                        </div>
+                        @empty
+                        <div class="empty-state">No canon entries yet</div>
+                        @endforelse
                     </div>
                 </div>
                 
                 <!-- References Tab -->
                 <div class="canon-tab-content" id="canon-references">
-                    <div class="canon-toolbar">
-                        <button class="btn btn-ghost btn-sm">▦ Gallery</button>
-                        <button class="btn btn-primary btn-sm">+ Upload Image</button>
-                    </div>
+                    <!-- Upload Form -->
+                    <form action="{{ route('upload.reference') }}" method="POST" enctype="multipart/form-data" class="reference-upload-form">
+                        @csrf
+                        <input type="hidden" name="project_id" value="{{ $project->id }}">
+                        <div class="reference-upload-zone">
+                            <input type="file" name="image" accept="image/*" onchange="this.form.submit()" id="ref-upload-input">
+                            <div class="upload-prompt">
+                                <span>📷</span>
+                                <p>Drop images or click to upload</p>
+                                <p class="muted">Used for AI generation</p>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <!-- Reference Grid -->
                     <div class="reference-grid">
-                        <div class="reference-card">🦸</div>
-                        <div class="reference-card">😈</div>
+                        @forelse($references as $ref)
+                        <div class="reference-card" data-id="{{ $ref->id }}">
+                            <img src="{{ Storage::url($ref->path) }}" alt="{{ $ref->title }}">
+                            <div class="reference-info">
+                                <span>{{ $ref->title }}</span>
+                            </div>
+                            <button class="btn-delete" onclick="deleteReference({{ $ref->id }})" title="Delete">&times;</button>
+                        </div>
+                        @empty
+                        <div class="empty-state">No reference images yet</div>
+                        @endforelse
                     </div>
                 </div>
             </div>
