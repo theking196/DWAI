@@ -9,19 +9,6 @@ use App\Http\Controllers\Web\SessionController;
 use App\Http\Controllers\Web\UploadController;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| DWAI Studio Routes
-|--------------------------------------------------------------------------
-|
-| ACCESS LEVELS:
-| - guest: No auth required (login page only)
-| - viewer: Anyone logged in can view
-| - editor: Can edit, upload, generate AI
-| - admin: Can delete projects, manage settings
-|
-*/
-
 // ============================================================
 // GUEST ROUTES (No Auth)
 // ============================================================
@@ -30,7 +17,6 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
 });
 
-// Logout (auth required)
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 
@@ -70,6 +56,13 @@ Route::middleware(['auth', 'role:editor'])->group(function () {
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
     
+    // Projects - Edit
+    Route::get('/projects/{project}/edit', [ProjectController::class, 'edit'])->name('projects.edit');
+    Route::put('/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
+    
+    // Projects - Archive
+    Route::post('/projects/{project}/archive', [ProjectController::class, 'archive'])->name('projects.archive');
+    
     // References - Manage
     Route::post('/projects/{project}/references/primary', [ReferenceController::class, 'setPrimary'])
         ->name('projects.references.primary');
@@ -94,8 +87,6 @@ Route::middleware(['auth', 'role:editor'])->group(function () {
 // ============================================================
 Route::middleware(['auth', 'role:admin'])->group(function () {
     
-    // Project Management
+    // Project Management - Delete
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
-    
-    // Future: Settings, User management, etc.
 });
