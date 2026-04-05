@@ -50,9 +50,9 @@ class PromptFormatter
             'canon' => [],
         ];
 
-        // Visual style from project
+        // Visual style from project (with session override support)
         if ($project) {
-            $context['style'] = self::getVisualStyle($project);
+            $context['style'] = self::getVisualStyle($project, $session);
         }
 
         // Reference images
@@ -154,29 +154,40 @@ class PromptFormatter
         return implode("\n", $sections);
     }
 
-    protected static function getVisualStyle(Project $project): array
+    protected static function getVisualStyle(Project $project, ?Session $session = null): array
     {
         $style = [];
 
-        // Main style image
-        if ($project->style_image_path) {
+        // Check session override first
+        if ($session && $session->hasStyleOverride()) {
             $style['main'] = [
-                'url' => asset('storage/' . $project->style_image_path),
-                'title' => $project->style_image_title,
+                'url' => $session->getStyleOverrideUrl(),
+                'description' => $session->getStyleOverrideDescription(),
+                'source' => 'session_override',
+            ];
+            
+            // Also include project supporting images
+            $projectRefs = $project->getAllStyleReferences();
+            if (count($projectRefs) > 1) {
+                $style['supporting'] = array_slice($projectRefs, 1);
+            }
+            
+            return $style;
+        }
+
+        // Fall back to project style
+        if ($project->visual_style_image) {
+            $style['main'] = [
+                'url' => $project->getVisualStyleUrl(),
+                'description' => $project->getVisualStyleDescription(),
+                'source' => 'project',
             ];
         }
 
         // Supporting style images
-        if ($project->style_images) {
-            $style['supporting'] = array_map(fn($img) => [
-                'url' => asset('storage/' . $img['path']),
-                'title' => $img['title'] ?? null,
-            ], $project->style_images);
-        }
-
-        // Style notes
-        if ($project->style_notes) {
-            $style['notes'] = $project->style_notes;
+        $projectRefs = $project->getAllStyleReferences();
+        if (count($projectRefs) > 1) {
+            $style['supporting'] = array_slice($projectRefs, 1);
         }
 
         return $style;
@@ -276,3 +287,48 @@ class PromptFormatter
         return "{$context}\n\n{$prompt}";
     }
 }
+
+    /**
+     * Add visual style to project context.
+     */
+    public static function formatVisualStyle($project, $session = null): ?string
+    {
+        // Get effective style (session override or project default)
+        $style = $session 
+            ? $session->getEffectiveStyle() 
+            : [
+                'image_url' => $project->getVisualStyleUrl(),
+                'description' => $project->getVisualStyleDescription(),
+                'source' => 'project',
+              ];
+
+        if (!$style['image_url'] && !$style['description']) {
+            return null;
+        }
+
+        $lines = ["=== VISUAL STYLE ==="];
+        $lines[] = "Source: {$style['source']}";
+        
+        if ($style['description']) {
+            $lines[] = "Description: {$style['description']}";
+        }
+        
+        if ($style['image_url']) {
+            $lines[] = "Reference Image: {$style['image_url']}";
+        }
+
+        // Add supporting images
+        if ($session) {
+            $projectStyleRefs = $project->getAllStyleReferences();
+            if (count($projectStyleRefs) > 1) {
+                $lines[] = "Additional References:";
+                foreach (array_slice($projectStyleRefs, 1) as $ref) {
+                    if ($ref['url']) {
+                        $lines[] = "  - {$ref['url']}";
+                    }
+                }
+            }
+        }
+
+        return implode("\n", $lines);
+    }
