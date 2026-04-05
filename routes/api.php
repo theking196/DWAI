@@ -228,3 +228,34 @@ Route::post('/assets/{id}/duplicate/{projectId}', function (int $id, int $projec
     return response()->json($newAsset);
 })->name('api.assets.duplicate');
 
+
+
+Route::get('/sessions/{session}/memory', function (int $session) {
+    $session = \App\Models\Session::findOrFail($session);
+    if ($session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    return response()->json($session->getShortTermMemory());
+})->name('api.sessions.memory');
+
+Route::put('/sessions/{session}/memory', function (Illuminate\Http\Request $request, int $session) {
+    $session = \App\Models\Session::findOrFail($session);
+    if ($session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    if ($request->has('temp_notes')) $session->updateTempNotes($request->temp_notes);
+    if ($request->has('ai_reasoning')) $session->updateAIReasoning($request->ai_reasoning);
+    if ($request->has('draft_text')) $session->updateDraftText($request->draft_text);
+    return response()->json($session->getShortTermMemory());
+})->name('api.sessions.memory.update');
+
+Route::post('/sessions/{session}/memory/reference', function (Illuminate\Http\Request $request, int $session) {
+    $session = \App\Models\Session::findOrFail($session);
+    if ($session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $session->addSessionReference(['url' => $request->url, 'title' => $request->title ?? null]);
+    return response()->json($session->getShortTermMemory());
+})->name('api.sessions.memory.add-reference');
+
+Route::delete('/sessions/{session}/memory', function (int $session) {
+    $session = \App\Models\Session::findOrFail($session);
+    if ($session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $session->clearShortTermMemory();
+    return response()->json(['cleared' => true]);
+})->name('api.sessions.memory.clear');
+
