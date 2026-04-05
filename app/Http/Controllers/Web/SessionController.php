@@ -91,8 +91,9 @@ class SessionController extends WebController
         $project = $session->project;
         $outputs = $session->aiOutputs;
         $timeline = $session->timelineEvents;
+        $memory = $session->getShortTermMemory();
 
-        return $this->view('sessions.show', compact('session', 'project', 'outputs', 'timeline'));
+        return $this->view('sessions.show', compact('session', 'project', 'outputs', 'timeline', 'memory'));
     }
 
     /**

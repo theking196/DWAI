@@ -16,6 +16,25 @@
             <h1 id="session-title">{{ $session->name }}</h1>
             <span class="session-type-badge" id="session-type">{{ $session->type }}</span>
         </div>
+    <!-- Short-Term Memory -->
+    <div class="memory-bar" id="memory-bar">
+        <div class="memory-section">
+            <span class="memory-label">📝 Notes</span>
+            <span class="memory-content" id="mem-notes">{{ $memory["temp_notes"] ?? "No notes" }}</span>
+        </div>
+        <div class="memory-section">
+            <span class="memory-label">🤔 AI Plan</span>
+            <span class="memory-content" id="mem-reasoning">{{ $memory["has_ai_reasoning"] ? "Active" : "None" }}</span>
+        </div>
+        <div class="memory-section">
+            <span class="memory-label">📄 Draft</span>
+            <span class="memory-content" id="mem-draft">{{ $memory["has_draft"] ? "In progress" : "Empty" }}</span>
+        </div>
+        <div class="memory-section">
+            <span class="memory-label">🔗 Refs</span>
+            <span class="memory-content" id="mem-refs-count">{{ $memory["reference_count"] ?? 0 }} refs</span>
+        </div>
+    </div>
         <div class="workspace-stats">
             <span>💭 <span id="stat-prompt">{{ $session->output_count }}</span> prompts</span>
             <span>🎬 <span id="stat-output">{{ $outputs->count() }}</span> outputs</span>
