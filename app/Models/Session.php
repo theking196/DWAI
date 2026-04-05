@@ -16,6 +16,7 @@ class Session extends Model
         'project_id',
         'name',
         'description',
+        'notes',
         'type',
         'status',
         'output_count',
@@ -49,13 +50,51 @@ class Session extends Model
         return $this->hasMany(TimelineEvent::class);
     }
 
-    public function conflicts(): HasMany
+    // ============================================================
+    // Scopes
+    // ============================================================
+
+    public function scopeActive($query)
     {
-        return $this->hasMany(Conflict::class);
+        return $query->where('status', 'active');
+    }
+
+    public function scopeCompleted($query)
+    {
+        return $query->where('status', 'completed');
+    }
+
+    public function scopeArchived($query)
+    {
+        return $query->where('status', 'archived');
+    }
+
+    public function scopeByType($query, string $type)
+    {
+        return $query->where('type', $type);
     }
 
     // ============================================================
-    // Scopes & Helpers
+    // Accessors
+    // ============================================================
+
+    public function getIsActiveAttribute(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return match ($this->status) {
+            'active' => 'In Progress',
+            'completed' => 'Completed',
+            'archived' => 'Archived',
+            default => ucfirst($this->status),
+        };
+    }
+
+    // ============================================================
+    // Helper Methods
     // ============================================================
 
     public function isActive(): bool
@@ -68,13 +107,42 @@ class Session extends Model
         return $this->status === 'completed';
     }
 
-    public function scopeActive($query)
+    public function isArchived(): bool
     {
-        return $query->where('status', 'active');
+        return $this->status === 'archived';
     }
 
-    public function scopeCompleted($query)
+    public function close(): void
     {
-        return $query->where('status', 'completed');
+        $this->update(['status' => 'completed']);
+    }
+
+    public function archive(): void
+    {
+        $this->update(['status' => 'archived']);
+    }
+
+    public function resume(): void
+    {
+        $this->update(['status' => 'active']);
+    }
+
+    public function updateNotes(string $notes): void
+    {
+        $this->update(['notes' => $notes]);
+    }
+
+    public function getSummary(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'type' => $this->type,
+            'status' => $this->status,
+            'output_count' => $this->output_count,
+            'project_name' => $this->project->name ?? null,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+        ];
     }
 }
