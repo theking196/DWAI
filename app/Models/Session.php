@@ -203,3 +203,90 @@ class Session extends Model
         return CanonCandidate::createFromSession($this, $data);
     }
 }
+
+    // ============================================================
+    // Session End - Handle Memory
+    // ============================================================
+
+    /**
+     * Close session with memory action.
+     * Promotes useful data to canon or discards.
+     */
+    public function closeWithMemoryAction(string $action = 'discard', ?array $promoteData = null): void
+    {
+        match($action) {
+            'promote' => $this->promoteMemoryToCanon($promoteData),
+            'discard' => $this->clearShortTermMemory(),
+            default => null,
+        };
+
+        $this->close();
+    }
+
+    /**
+     * Archive session with memory action.
+     */
+    public function archiveWithMemoryAction(string $reason = null, string $action = 'discard', ?array $promoteData = null): void
+    {
+        match($action) {
+            'promote' => $this->promoteMemoryToCanon($promoteData),
+            'discard' => $this->clearShortTermMemory(),
+            default => null,
+        };
+
+        $this->archive($reason);
+    }
+
+    /**
+     * Promote short-term memory to canon.
+     */
+    public function promoteMemoryToCanon(?array $options = null): ?CanonEntry
+    {
+        if (!$this->hasContextAttribute) {
+            return null;
+        }
+
+        $title = $options['title'] ?? ($this->name . ' - Notes');
+        $type = $options['type'] ?? 'note';
+        $importance = $options['importance'] ?? 'minor';
+
+        // Combine memory into content
+        $content = [];
+        if ($this->temp_notes) $content[] = "Notes: " . $this->temp_notes;
+        if ($this->ai_reasoning) $content[] = "AI Reasoning: " . $this->ai_reasoning;
+        if ($this->draft_text) $content[] = "Draft: " . $this->draft_text;
+
+        $canon = CanonEntry::create([
+            'user_id' => $this->user_id,
+            'project_id' => $this->project_id,
+            'title' => $title,
+            'type' => $type,
+            'content' => implode("\n\n---\n\n", $content),
+            'tags' => $options['tags'] ?? ['from-session', 'temp-memory'],
+            'importance' => $importance,
+        ]);
+
+        $this->recordActivity('memory_promoted', 'Short-term memory promoted to canon', ['canon_id' => $canon->id]);
+
+        // Optionally clear memory after promoting
+        if ($options['clear_after'] ?? true) {
+            $this->clearShortTermMemory();
+        }
+
+        return $canon;
+    }
+
+    /**
+     * Get memory summary for decision.
+     */
+    public function getMemorySummary(): array
+    {
+        return [
+            'has_content' => $this->hasContextAttribute,
+            'temp_notes_length' => strlen($this->temp_notes ?? ''),
+            'draft_length' => strlen($this->draft_text ?? ''),
+            'has_reasoning' => !empty($this->ai_reasoning),
+            'reference_count' => count($this->session_references ?? []),
+            'suggestion' => $this->hasContextAttribute ? 'Consider promoting to canon before closing' : 'No memory to preserve',
+        ];
+    }

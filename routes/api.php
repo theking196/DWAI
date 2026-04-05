@@ -259,3 +259,28 @@ Route::delete('/sessions/{session}/memory', function (int $session) {
     return response()->json(['cleared' => true]);
 })->name('api.sessions.memory.clear');
 
+
+
+Route::post('/sessions/{session}/close', function (Illuminate\Http\Request $request, int $session) {
+    $session = \App\Models\Session::findOrFail($session);
+    if ($session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $action = $request->get('memory_action', 'discard');  // promote, discard
+    $promoteData = $request->only(['title', 'type', 'importance', 'tags']);
+    $session->closeWithMemoryAction($action, $promoteData);
+    return response()->json(['status' => 'completed', 'action' => $action]);
+})->name('api.sessions.close');
+
+Route::get('/sessions/{session}/memory/summary', function (int $session) {
+    $session = \App\Models\Session::findOrFail($session);
+    if ($session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    return response()->json($session->getMemorySummary());
+})->name('api.sessions.memory.summary');
+
+Route::post('/sessions/{session}/memory/promote', function (Illuminate\Http\Request $request, int $session) {
+    $session = \App\Models\Session::findOrFail($session);
+    if ($session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $options = $request->only(['title', 'type', 'importance', 'tags']);
+    $canon = $session->promoteMemoryToCanon($options);
+    return response()->json(['promoted' => $canon ? true : false, 'canon_id' => $canon?->id]);
+})->name('api.sessions.memory.promote');
+
