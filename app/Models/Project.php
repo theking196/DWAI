@@ -385,3 +385,95 @@ class Project extends Model
             'additional_images' => $this->getStyleImageUrls(),
         ];
     }
+
+    // ============================================================
+    // Style Reference Images
+    // ============================================================
+
+    /**
+     * Get all style reference images (main + supporting).
+     */
+    public function getAllStyleReferences(): array
+    {
+        $refs = [];
+        
+        // Main style
+        if ($this->visual_style_image) {
+            $refs[] = [
+                'type' => 'main',
+                'url' => $this->getVisualStyleUrl(),
+                'description' => $this->visual_style_description,
+            ];
+        }
+        
+        // Supporting images
+        foreach (($this->style_images ?? []) as $img) {
+            $refs[] = [
+                'type' => 'supporting',
+                'url' => isset($img['path']) ? asset('storage/' . $img['path']) : null,
+                'title' => $img['title'] ?? null,
+                'notes' => $img['notes'] ?? null,
+            ];
+        }
+        
+        return $refs;
+    }
+
+    /**
+     * Get count of style references.
+     */
+    public function getStyleReferenceCount(): int
+    {
+        return count($this->style_images ?? []) + ($this->visual_style_image ? 1 : 0);
+    }
+
+    /**
+     * Remove a style reference image.
+     */
+    public function removeStyleImage(int $index): bool
+    {
+        $images = $this->style_images ?? [];
+        
+        if (!isset($images[$index])) {
+            return false;
+        }
+        
+        unset($images[$index]);
+        $this->update(['style_images' => array_values($images)]);
+        
+        return true;
+    }
+
+    /**
+     * Update style image notes.
+     */
+    public function updateStyleImageNotes(int $index, string $notes): bool
+    {
+        $images = $this->style_images ?? [];
+        
+        if (!isset($images[$index])) {
+            return false;
+        }
+        
+        $images[$index]['notes'] = $notes;
+        $this->update(['style_images' => $images]);
+        
+        return true;
+    }
+
+    /**
+     * Reorder style images.
+     */
+    public function reorderStyleImages(array $order): void
+    {
+        $images = $this->style_images ?? [];
+        $reordered = [];
+        
+        foreach ($order as $index) {
+            if (isset($images[$index])) {
+                $reordered[] = $images[$index];
+            }
+        }
+        
+        $this->update(['style_images' => $reordered]);
+    }
