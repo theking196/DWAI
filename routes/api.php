@@ -284,3 +284,86 @@ Route::post('/sessions/{session}/memory/promote', function (Illuminate\Http\Requ
     return response()->json(['promoted' => $canon ? true : false, 'canon_id' => $canon?->id]);
 })->name('api.sessions.memory.promote');
 
+
+
+Route::get('/sessions/{session}/memory/promote/form', function (int $session) {
+    $session = \App\Models\Session::findOrFail($session);
+    if ($session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    return response()->json([
+        'memory' => $session->getShortTermMemory(),
+        'summary' => $session->getMemorySummary(),
+        'canon_types' => ['character', 'location', 'lore', 'rule', 'timeline_event', 'note'],
+    ]);
+})->name('api.sessions.memory.promote-form');
+
+Route::post('/sessions/{session}/memory/promote/review', function (Illuminate\Http\Request $request, int $session) {
+    $session = \App\Models\Session::findOrFail($session);
+    if ($session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    
+    $validated = $request->validate([
+        'title' => 'required|string|max:255',
+        'type' => 'required|in:character,location,lore,rule,timeline_event,note',
+        'content' => 'nullable|string',
+        'importance' => 'nullable|in:none,minor,important,critical',
+        'tags' => 'nullable|array',
+    ]);
+    
+    // Create candidate for review
+    $candidate = \App\Models\CanonCandidate::create([
+        'user_id' => auth()->id(),
+        'project_id' => $session->project_id,
+        'session_id' => $session->id,
+        'title' => $validated['title'],
+        'type' => $validated['type'],
+        'content' => $validated['content'] ?? $session->draft_text ?? $session->temp_notes,
+        'ai_reasoning' => $session->ai_reasoning,
+        'tags' => $validated['tags'] ?? ['from-session'],
+        'importance' => $validated['importance'] ?? 'none',
+        'status' => 'pending',
+    ]);
+    
+    return response()->json(['candidate_id' => $candidate->id, 'status' => 'pending_review']);
+})->name('api.sessions.memory.to-candidate');
+
+
+
+Route::get('/canon-candidates/{id}/review', function (int $id) {
+    $candidate = \App\Models\CanonCandidate::with('session')->findOrFail($id);
+    if ($candidate->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    return response()->json([
+        'candidate' => $candidate,
+        'context' => $candidate->getContext(),
+    ]);
+})->name('api.canon-candidates.review');
+
+Route::post('/canon-candidates/{id}/review/approve', function (Illuminate\Http\Request $request, int $id) {
+    $candidate = \App\Models\CanonCandidate::findOrFail($id);
+    if ($candidate->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    
+    $validated = $request->validate([
+        'title' => 'sometimes|string|max:255',
+        'type' => 'sometimes|in:character,location,lore,rule,timeline_event,note',
+        'content' => 'nullable|string',
+        'importance' => 'nullable|in:none,minor,important,critical',
+        'tags' => 'nullable|array',
+    ]);
+    
+    // Update candidate with any edits
+    $candidate->update(array_filter($validated));
+    
+    // Approve and promote
+    $canon = $candidate->approve($request->notes ?? 'Approved from session review');
+    
+    return response()->json(['canon_id' => $canon->id, 'status' => 'promoted']);
+})->name('api.canon-candidates.review.approve');
+
+Route::post('/canon-candidates/{id}/review/reject', function (Illuminate\Http\Request $request, int $id) {
+    $candidate = \App\Models\CanonCandidate::findOrFail($id);
+    if ($candidate->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    
+    $request->validate(['reason' => 'required|string']);
+    $candidate->reject($request->reason);
+    
+    return response()->json(['status' => 'rejected']);
+})->name('api.canon-candidates.review.reject');
+
