@@ -2,131 +2,209 @@
 
 namespace App\Services\AI;
 
-use App\Models\Project;
-use App\Models\Session;
-use App\Models\AIOutput;
-use App\Models\ReferenceImage;
+use App\Services\AI\Providers\AIProviderInterface;
+use App\Services\AI\Providers\MockProvider;
 use Illuminate\Support\Facades\Log;
 
-/**
- * AI Service Manager
- * 
- * Main service for AI operations. Manages providers and handles
- * integration with database models.
- */
 class AIService
 {
-    protected ?AIProvider $provider = null;
+    protected ?AIProviderInterface $provider = null;
     protected string $defaultProvider = 'mock';
-    
-    /**
-     * Get the active AI provider.
-     */
-    public function getProvider(string $provider = null): AIProvider
+
+    public function __construct()
     {
-        $provider = $provider ?? $this->defaultProvider;
-        
-        return match ($provider) {
-            'mock' => new MockAIProvider(),
-            default => new MockAIProvider(),
+        $this->provider = $this->resolveProvider();
+    }
+
+    /**
+     * Resolve the active provider.
+     */
+    protected function resolveProvider(): AIProviderInterface
+    {
+        // Load from config or env
+        $providerName = config('ai.provider', $this->defaultProvider);
+
+        return $this->createProvider($providerName);
+    }
+
+    /**
+     * Create a provider instance.
+     */
+    protected function createProvider(string $name): AIProviderInterface
+    {
+        return match(strtolower($name)) {
+            'mock' => new MockProvider(),
+            // Future providers:
+            // 'openai' => new OpenAIProvider(),
+            // 'anthropic' => new AnthropicProvider(),
+            // 'replicate' => new ReplicateProvider(),
+            // 'stability' => new StabilityProvider(),
+            default => new MockProvider(),
         };
     }
-    
+
     /**
-     * Set the default provider.
+     * Get the current provider.
      */
-    public function setDefaultProvider(string $provider): self
+    public function getProvider(): AIProviderInterface
     {
-        $this->defaultProvider = $provider;
-        return $this;
+        return $this->provider;
     }
-    
+
     /**
-     * Generate text for a session.
+     * Switch provider at runtime.
      */
-    public function generateText(
-        Session $session,
-        string $prompt,
-        array $options = []
-    ): AIOutput {
-        $provider = $this->getProvider($options['provider'] ?? null);
+    public function setProvider(string $name): void
+    {
+        $this->provider = $this->createProvider($name);
+    }
+
+    /**
+     * Generate text content.
+     * 
+     * @param string $prompt The main prompt
+     * @param array $context Context data (project, session, canon, references)
+     * @return array Result with content, model, metadata
+     */
+    public function generateText(string $prompt, array $context = []): array
+    {
+        $context = $this->prepareContext($context);
         
-        Log::info('AI Text Generation', [
-            'session_id' => $session->id,
-            'provider' => $provider->getName(),
+        Log::info('AI: Generating text', [
             'prompt_length' => strlen($prompt),
+            'context_keys' => array_keys($context),
         ]);
-        
-        $result = $provider->generateText($prompt, $options);
-        
-        // Save to database
-        $output = AIOutput::create([
-            'session_id' => $session->id,
-            'prompt' => $prompt,
-            'result' => $result['text'],
-            'type' => 'text',
-            'model' => $result['model'],
-            'metadata' => $result['usage'] ?? null,
-        ]);
-        
-        // Update session output count
-        $session->increment('output_count');
-        
-        return $output;
+
+        $result = $this->provider->generateText($prompt, $context);
+
+        if ($result['success']) {
+            Log::info('AI: Text generated', ['model' => $result['model']]);
+        } else {
+            Log::error('AI: Text generation failed', ['error' => $result['error'] ?? 'Unknown']);
+        }
+
+        return $result;
     }
-    
+
     /**
-     * Generate image for a session.
+     * Generate image(s) from prompt.
+     * 
+     * @param string $prompt Image description
+     * @param array $references Reference images/URLs
+     * @return array Result with images array
      */
-    public function generateImage(
-        Session $session,
-        string $prompt,
-        array $options = []
-    ): AIOutput {
-        $provider = $this->getProvider($options['provider'] ?? null);
-        
-        // Get reference images from project
-        $references = $session->project->referenceImages()
-            ->pluck('path')
-            ->toArray();
-        
-        Log::info('AI Image Generation', [
-            'session_id' => $session->id,
-            'provider' => $provider->getName(),
-            'references_count' => count($references),
+    public function generateImage(string $prompt, array $references = []): array
+    {
+        Log::info('AI: Generating image', [
+            'prompt_length' => strlen($prompt),
+            'reference_count' => count($references),
         ]);
-        
-        $result = $provider->generateImage($prompt, $references, $options);
-        
-        // Save to database
-        $output = AIOutput::create([
-            'session_id' => $session->id,
-            'prompt' => $prompt,
-            'result' => $result['url'],
-            'type' => 'image',
-            'model' => $result['model'],
-            'metadata' => [
-                'size' => $result['size'] ?? null,
-                'references' => $references,
-            ],
-        ]);
-        
-        $session->increment('output_count');
-        
-        return $output;
+
+        $result = $this->provider->generateImage($prompt, $references);
+
+        if ($result['success']) {
+            Log::info('AI: Image generated', [
+                'image_count' => count($result['images'] ?? []),
+                'model' => $result['model'],
+            ]);
+        } else {
+            Log::error('AI: Image generation failed', ['error' => $result['error'] ?? 'Unknown']);
+        }
+
+        return $result;
     }
-    
+
     /**
-     * Get available providers.
+     * Generate storyboard with multiple frames.
+     * 
+     * @param string $prompt Storyboard description
+     * @param array $context Context (frame_count, style, etc.)
+     * @return array Result with frames array
      */
-    public function getAvailableProviders(): array
+    public function generateStoryboard(string $prompt, array $context = []): array
+    {
+        $context = $this->prepareContext($context);
+
+        Log::info('AI: Generating storyboard', [
+            'prompt_length' => strlen($prompt),
+            'frame_count' => $context['frame_count'] ?? 4,
+        ]);
+
+        $result = $this->provider->generateStoryboard($prompt, $context);
+
+        if ($result['success']) {
+            Log::info('AI: Storyboard generated', [
+                'frame_count' => $result['total_frames'],
+                'model' => $result['model'],
+            ]);
+        } else {
+            Log::error('AI: Storyboard generation failed', ['error' => $result['error'] ?? 'Unknown']);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Prepare context by enriching with project/session data.
+     */
+    protected function prepareContext(array $context): array
+    {
+        // Add default frame count if not set
+        if (!isset($context['frame_count'])) {
+            $context['frame_count'] = 4;
+        }
+
+        // Add style references if project provided
+        if (isset($context['project']) && $context['project']) {
+            $project = $context['project'];
+            
+            if ($project->style_image_path) {
+                $context['style_images'] = [
+                    ['url' => asset('storage/' . $project->style_image_path)]
+                ];
+            }
+
+            if ($project->style_images) {
+                $context['style_images'] = array_merge(
+                    $context['style_images'] ?? [],
+                    array_map(fn($img) => ['url' => asset('storage/' . $img['path'])], $project->style_images)
+                );
+            }
+        }
+
+        // Add canon entries if session provided
+        if (isset($context['session']) && $context['session']) {
+            $session = $context['session'];
+            
+            if ($session->project && $session->project->canonEntries) {
+                $context['canon'] = $session->project->canonEntries()
+                    ->select('id', 'title', 'type', 'content')
+                    ->limit(10)
+                    ->get()
+                    ->toArray();
+            }
+        }
+
+        return $context;
+    }
+
+    /**
+     * Check if AI is available.
+     */
+    public function isAvailable(): bool
+    {
+        return $this->provider->isAvailable();
+    }
+
+    /**
+     * Get provider info.
+     */
+    public function getInfo(): array
     {
         return [
-            'mock' => [
-                'name' => 'Mock AI',
-                'available' => true,
-                'description' => 'Development provider for testing',
-            ],
+            'provider' => $this->provider->getName(),
+            'available' => $this->provider->isAvailable(),
+            'features' => $this->provider->getSupportedFeatures(),
         ];
     }
 }
