@@ -79,3 +79,7 @@ Route::get('/ai/outputs/{session}', [AIController::class, 'outputs'])
 
 Route::get('/ai/providers', [AIController::class, 'providers'])
     ->name('ai.providers');
+
+Route::get('/ai/outputs/{session}/status/{output}', [AIController::class, 'status'])
+    ->name('ai.status');
+

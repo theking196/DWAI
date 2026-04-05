@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Session;
 use App\Models\AIOutput;
+use App\Jobs\GenerateAIOutput;
 use App\Services\AI\AIService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +20,7 @@ class AIController extends Controller
     }
     
     /**
-     * Generate text AI response.
+     * Generate text AI response (async via queue).
      */
     public function generateText(Request $request): JsonResponse
     {
@@ -28,10 +29,32 @@ class AIController extends Controller
             'prompt' => 'required|string|min:1|max:5000',
             'model' => 'nullable|string',
             'temperature' => 'nullable|numeric|min:0|max:2',
+            'async' => 'nullable|boolean',
         ]);
         
         $session = Session::with('project')->findOrFail($validated['session_id']);
         
+        // Check for async mode
+        if ($validated['async'] ?? true) {
+            // Dispatch to queue
+            GenerateAIOutput::dispatch(
+                $session->id,
+                $validated['prompt'],
+                'text',
+                [
+                    'model' => $validated['model'] ?? 'gpt-4',
+                    'temperature' => $validated['temperature'] ?? 0.7,
+                ]
+            );
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Generation queued',
+                'status' => 'pending',
+            ]);
+        }
+        
+        // Sync mode (immediate)
         try {
             $output = $this->ai->generateText(
                 $session,
@@ -48,6 +71,7 @@ class AIController extends Controller
                     'id' => $output->id,
                     'text' => $output->result,
                     'model' => $output->model,
+                    'status' => 'completed',
                     'created_at' => $output->created_at->toISOString(),
                 ],
             ]);
@@ -62,7 +86,7 @@ class AIController extends Controller
     }
     
     /**
-     * Generate image AI response.
+     * Generate image AI response (async via queue).
      */
     public function generateImage(Request $request): JsonResponse
     {
@@ -71,10 +95,31 @@ class AIController extends Controller
             'prompt' => 'required|string|min:1|max:2000',
             'size' => 'nullable|in:256x256,512x512,1024x1024',
             'model' => 'nullable|string',
+            'async' => 'nullable|boolean',
         ]);
         
         $session = Session::with('project')->findOrFail($validated['session_id']);
         
+        // Async mode (default)
+        if ($validated['async'] ?? true) {
+            GenerateAIOutput::dispatch(
+                $session->id,
+                $validated['prompt'],
+                'image',
+                [
+                    'size' => $validated['size'] ?? '1024x1024',
+                    'model' => $validated['model'] ?? 'dall-e-3',
+                ]
+            );
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Image generation queued',
+                'status' => 'pending',
+            ]);
+        }
+        
+        // Sync mode
         try {
             $output = $this->ai->generateImage(
                 $session,
@@ -92,6 +137,7 @@ class AIController extends Controller
                     'url' => $output->result,
                     'prompt' => $validated['prompt'],
                     'model' => $output->model,
+                    'status' => 'completed',
                     'created_at' => $output->created_at->toISOString(),
                 ],
             ]);
@@ -106,18 +152,34 @@ class AIController extends Controller
     }
     
     /**
-     * Get session AI outputs.
+     * Get session AI outputs with status.
      */
     public function outputs(int $sessionId): JsonResponse
     {
         $session = Session::findOrFail($sessionId);
         $outputs = $session->aiOutputs()
+            ->select('id', 'session_id', 'prompt', 'result', 'type', 'model', 'status', 'error_message', 'created_at')
             ->orderBy('created_at', 'desc')
             ->get();
         
         return response()->json([
             'success' => true,
             'outputs' => $outputs,
+        ]);
+    }
+    
+    /**
+     * Check output status.
+     */
+    public function status(int $outputId): JsonResponse
+    {
+        $output = AIOutput::findOrFail($outputId);
+        
+        return response()->json([
+            'success' => true,
+            'status' => $output->status,
+            'result' => $output->status === 'completed' ? $output->result : null,
+            'error' => $output->status === 'failed' ? $output->error_message : null,
         ]);
     }
     

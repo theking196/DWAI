@@ -17,6 +17,8 @@ class AIOutput extends Model
         'type',
         'model',
         'metadata',
+        'status',
+        'error_message',
     ];
 
     protected $casts = [
@@ -26,5 +28,31 @@ class AIOutput extends Model
     public function session(): BelongsTo
     {
         return $this->belongsTo(Session::class);
+    }
+
+    public function markAsPending(): void
+    {
+        $this->update(['status' => 'pending']);
+    }
+
+    public function markAsProcessing(): void
+    {
+        $this->update(['status' => 'processing']);
+    }
+
+    public function markAsCompleted(string $result): void
+    {
+        $this->update([
+            'status' => 'completed',
+            'result' => $result,
+        ]);
+    }
+
+    public function markAsFailed(string $error): void
+    {
+        $this->update([
+            'status' => 'failed',
+            'error_message' => $error,
+        ]);
     }
 }
