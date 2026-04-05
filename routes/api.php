@@ -101,3 +101,14 @@ Route::post('/canon-candidates/{id}/reject', [CanonCandidateController::class, '
 Route::post('/canon-candidates/from-session/{sessionId}', [CanonCandidateController::class, 'createFromSession'])->name('api.canon-candidates.from-session');
 Route::get('/canon-candidates/{project}/stats', [CanonCandidateController::class, 'stats'])->name('api.canon-candidates.stats');
 
+
+
+use App\Http\Controllers\Api\ReferenceImageController;
+
+Route::get('/references', [ReferenceImageController::class, 'index'])->name('api.references.index');
+Route::post('/references', [ReferenceImageController::class, 'store'])->name('api.references.store');
+Route::put('/references/{id}', [ReferenceImageController::class, 'update'])->name('api.references.update');
+Route::post('/references/{id}/primary', [ReferenceImageController::class, 'setPrimary'])->name('api.references.primary');
+Route::delete('/references/{id}', [ReferenceImageController::class, 'destroy'])->name('api.references.destroy');
+Route::get('/references/project/{project}/count', [ReferenceImageController::class, 'countByProject'])->name('api.references.count');
+
