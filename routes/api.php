@@ -595,3 +595,65 @@ Route::get('/continuity/{project}/summary', function (int $project) {
     return response()->json($service->getProjectContinuitySummary($project));
 })->name('api.continuity.summary');
 
+
+
+Route::get('/projects/{project}/timeline/ui', function (int $project) {
+    $project = \App\Models\Project::findOrFail($project);
+    if ($project->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    
+    // Get timeline events grouped
+    $events = \App\Models\TimelineEvent::where('project_id', $project)
+        ->orderBy('order_index')
+        ->get();
+    
+    // Group by session
+    $bySession = $events->groupBy('session_id')->map(function ($sessionEvents) {
+        return $sessionEvents->map(fn($e) => [
+            'id' => $e->id,
+            'title' => $e->title,
+            'description' => $e->description,
+            'order' => $e->order_index,
+            'timestamp' => $e->event_timestamp?->toISOString(),
+            'canon_count' => count($e->related_canon ?? []),
+        ]);
+    });
+    
+    // Timeline with sessions
+    $timeline = [
+        'project' => ['id' => $project->id, 'name' => $project->name],
+        'events' => $events->map(fn($e) => [
+            'id' => $e->id,
+            'title' => $e->title,
+            'description' => $e->description,
+            'order' => $e->order_index,
+            'timestamp' => $e->event_timestamp?->toISOString(),
+            'session_id' => $e->session_id,
+            'session_name' => $e->session?->name,
+            'canon' => $e->getCanonEntries(),
+        ]),
+        'by_session' => $bySession,
+        'stats' => [
+            'total' => $events->count(),
+            'with_sessions' => $events->whereNotNull('session_id')->count(),
+            'with_canon' => $events->filter(fn($e) => !empty($e->related_canon))->count(),
+        ],
+    ];
+    
+    return response()->json($timeline);
+})->name('api.timeline.ui');
+
+Route::get('/projects/{project}/timeline/compact', function (int $project) {
+    $events = \App\Models\TimelineEvent::where('project_id', $project)
+        ->orderBy('order_index')
+        ->get(['id', 'title', 'order_index', 'event_timestamp', 'session_id', 'description']);
+    
+    return response()->json([
+        'events' => $events->map(fn($e) => [
+            'id' => $e->id,
+            'title' => $e->title,
+            'order' => $e->order_index,
+            'date' => $e->event_timestamp?->format('Y-m-d'),
+        ]),
+    ]);
+})->name('api.timeline.compact');
+
