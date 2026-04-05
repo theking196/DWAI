@@ -488,3 +488,66 @@ Route::get('/search/context', function (Illuminate\Http\Request $request) {
     return response()->json($context);
 })->name('api.search.context');
 
+
+
+# Timeline Events
+Route::get('/projects/{project}/timeline', function (int $project) {
+    $events = \App\Models\TimelineEvent::forProject($project);
+    return response()->json($events->map(fn($e) => $e->getSummary()));
+})->name('api.timeline.index');
+
+Route::post('/projects/{project}/timeline', function (Illuminate\Http\Request $request, int $project) {
+    $p = \App\Models\Project::findOrFail($project);
+    if ($p->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    
+    $validated = $request->validate([
+        'title' => 'required|string|max:255',
+        'description' => 'nullable|string',
+        'event_timestamp' => 'nullable|date',
+        'order_index' => 'nullable|integer',
+    ]);
+    
+    $maxOrder = \App\Models\TimelineEvent::where('project_id', $project)->max('order_index') ?? 0;
+    
+    $event = \App\Models\TimelineEvent::create([
+        'project_id' => $project,
+        'session_id' => $request->session_id,
+        'user_id' => auth()->id(),
+        'title' => $validated['title'],
+        'description' => $validated['description'] ?? null,
+        'order_index' => $validated['order_index'] ?? $maxOrder + 1,
+        'event_timestamp' => $validated['event_timestamp'] ?? null,
+    ]);
+    
+    return response()->json($event, 201);
+})->name('api.timeline.create');
+
+Route::put('/timeline/{id}', function (Illuminate\Http\Request $request, int $id) {
+    $event = \App\Models\TimelineEvent::findOrFail($id);
+    if ($event->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    
+    $event->update($request->only(['title', 'description', 'order_index', 'event_timestamp']));
+    return response()->json($event);
+})->name('api.timeline.update');
+
+Route::delete('/timeline/{id}', function (int $id) {
+    $event = \App\Models\TimelineEvent::findOrFail($id);
+    if ($event->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $event->delete();
+    return response()->json(['deleted' => true]);
+})->name('api.timeline.delete');
+
+Route::post('/timeline/{id}/canon/{canonId}', function (int $id, int $canonId) {
+    $event = \App\Models\TimelineEvent::findOrFail($id);
+    if ($event->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $event->addCanon($canonId);
+    return response()->json(['added' => true]);
+})->name('api.timeline.add-canon');
+
+Route::post('/timeline/{id}/reorder', function (Illuminate\Http\Request $request, int $id) {
+    $event = \App\Models\TimelineEvent::findOrFail($id);
+    if ($event->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $event->reorder($request->order_index);
+    return response()->json(['reordered' => true]);
+})->name('api.timeline.reorder');
+
