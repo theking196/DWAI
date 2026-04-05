@@ -551,3 +551,33 @@ Route::post('/timeline/{id}/reorder', function (Illuminate\Http\Request $request
     return response()->json(['reordered' => true]);
 })->name('api.timeline.reorder');
 
+
+
+# Timeline ordering
+Route::post('/projects/{project}/timeline/validate', function (int $project) {
+    $validation = \App\Models\TimelineEvent::validateTimeline($project);
+    return response()->json($validation);
+})->name('api.timeline.validate');
+
+Route::post('/projects/{project}/timeline/order-by-timestamp', function (int $project) {
+    \App\Models\TimelineEvent::orderByTimestamp($project);
+    return response()->json(['ordered' => true]);
+})->name('api.timeline.order-timestamp');
+
+Route::get('/projects/{project}/timeline/sequences', function (int $project) {
+    $sequences = \App\Models\TimelineEvent::detectSequences($project);
+    return response()->json(['sequences' => $sequences]);
+})->name('api.timeline.sequences');
+
+Route::get('/projects/{project}/timeline/suggest-position', function (Illuminate\Http\Request $request, int $project) {
+    $position = \App\Models\TimelineEvent::suggestPosition($project, $request->before_title);
+    return response()->json(['suggested_position' => $position]);
+})->name('api.timeline.suggest-position');
+
+Route::post('/timeline/{id}/move', function (Illuminate\Http\Request $request, int $id) {
+    $event = \App\Models\TimelineEvent::findOrFail($id);
+    if ($event->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    \App\Models\TimelineEvent::reorderEvent($id, $request->new_index);
+    return response()->json(['moved' => true]);
+})->name('api.timeline.move');
+
