@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\AIController;
+use App\Http\Controllers\Api\CanonController as ApiCanonController;
 use App\Http\Controllers\Api\ReferenceController;
 use App\Http\Controllers\Web\AuthController;
+use App\Http\Controllers\Web\CanonController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\ProjectController;
 use App\Http\Controllers\Web\SessionController;
@@ -27,11 +29,15 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/projects/{project}/references', [ReferenceController::class, 'forProject'])->name('projects.references');
     Route::get('/projects/{project}/confirm-delete', [ProjectController::class, 'confirmDelete'])->name('projects.confirm-delete');
     
-    // Sessions - View
+    // Canon - View
+    Route::get('/projects/{project}/canon', [CanonController::class, 'index'])->name('canon.index');
+    Route::get('/projects/{project}/canon/{canon}', [CanonController::class, 'show'])->name('canon.show');
+    
+    // Sessions
     Route::get('/sessions', [SessionController::class, 'index'])->name('sessions.index');
     Route::get('/sessions/{session}', [SessionController::class, 'show'])->name('sessions.show');
     
-    // AI - View
+    // AI View
     Route::get('/ai/outputs/{session}', [AIController::class, 'outputs'])->name('ai.outputs');
     Route::get('/ai/outputs/{session}/status/{output}', [AIController::class, 'status'])->name('ai.status');
 });
@@ -47,7 +53,14 @@ Route::middleware(['auth', 'role:editor'])->group(function () {
     Route::post('/projects/{project}/unarchive', [ProjectController::class, 'unarchive'])->name('projects.unarchive');
     Route::post('/projects/{project}/references/primary', [ReferenceController::class, 'setPrimary'])->name('projects.references.primary');
     
-    // Sessions - CRUD
+    // Canon CRUD
+    Route::get('/projects/{project}/canon/create', [CanonController::class, 'create'])->name('canon.create');
+    Route::post('/projects/{project}/canon', [CanonController::class, 'store'])->name('canon.store');
+    Route::get('/projects/{project}/canon/{canon}/edit', [CanonController::class, 'edit'])->name('canon.edit');
+    Route::put('/projects/{project}/canon/{canon}', [CanonController::class, 'update'])->name('canon.update');
+    Route::delete('/projects/{project}/canon/{canon}', [CanonController::class, 'destroy'])->name('canon.destroy');
+    
+    // Sessions
     Route::get('/sessions/create', [SessionController::class, 'create'])->name('sessions.create');
     Route::post('/sessions', [SessionController::class, 'store'])->name('sessions.store');
     Route::get('/sessions/{session}/edit', [SessionController::class, 'edit'])->name('sessions.edit');
