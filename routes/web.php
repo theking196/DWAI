@@ -21,7 +21,6 @@ Route::get('/dashboard', function () {
 Route::resource('projects', ProjectController::class);
 Route::resource('sessions', SessionController::class);
 
-// Legacy HTML template redirect
-Route::get('/projects-html', function () {
-    return file_get_contents(base_path('../dwai-studio/index.html'));
-});
+// Legacy route aliases
+Route::get('/project/{id}', [ProjectController::class, 'show'])->name('projects.show');
+Route::get('/session/{id}', [SessionController::class, 'show'])->name('sessions.show');
