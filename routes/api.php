@@ -744,3 +744,14 @@ Route::post('/conflicts/{id}/auto-resolve', function (int $id) {
     return response()->json(['status' => 'resolved']);
 })->name('api.conflicts.auto-resolve');
 
+
+
+Route::get('/conflicts/{id}/suggest', function (int $id) {
+    $conflict = \App\Models\Conflict::findOrFail($id);
+    if ($conflict->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $assistant = app(\App\Services\AI\ConflictResolutionAssistant::class);
+    $suggestions = $assistant->suggestResolution($conflict);
+    $explanation = $assistant->explainConflict($conflict);
+    return response()->json(array_merge($suggestions, ['explanation' => $explanation]));
+})->name('api.conflicts.suggest');
+
