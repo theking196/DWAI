@@ -425,3 +425,38 @@ Route::post('/canon/{id}/versions/{version}/restore', function (int $id, int $ve
     return response()->json(['restored' => $restored ? true : false]);
 })->name('api.canon.version-restore');
 
+
+
+# Add relationships for embeddings count
+# In CanonEntry model, add:
+public function embeddings() {
+    return $this->morphMany(\App\Models\Embedding::class, 'entity', 'entity_type', 'entity_id');
+}
+
+# Add to routes:
+Route::post('/embeddings/generate/project/{project}', function (int $project) {
+    $gen = app(\App\Services\AI\EmbeddingGenerator::class);
+    $result = $gen->generateForProject($project);
+    return response()->json($result);
+})->name('api.embeddings.generate-project');
+
+Route::post('/embeddings/generate/{type}/{id}', function (string $type, int $id) {
+    $gen = app(\App\Services\AI\EmbeddingGenerator::class);
+    $emb = $gen->generateFor($type, $id);
+    return response()->json(['generated' => $emb ? true : false]);
+})->name('api.embeddings.generate');
+
+Route::get('/embeddings/search', function (Illuminate\Http\Request $request) {
+    $gen = app(\App\Services\AI\EmbeddingGenerator::class);
+    $results = $gen->semanticSearch($request->q, $request->project_id, [
+        'types' => $request->types ? explode(',', $request->types) : ['canon'],
+        'limit' => $request->limit ?? 10,
+    ]);
+    return response()->json($results);
+})->name('api.embeddings.search');
+
+Route::get('/embeddings/project/{project}/stats', function (int $project) {
+    $gen = app(\App\Services\AI\EmbeddingGenerator::class);
+    return response()->json($gen->getProjectEmbeddingStats($project));
+})->name('api.embeddings.stats');
+

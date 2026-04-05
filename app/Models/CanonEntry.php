@@ -21,6 +21,10 @@ class CanonEntry extends Model
 
     // Relationships
     public function project(): BelongsTo { return $this->belongsTo(Project::class); }
+    public function embeddings() {
+        return $this->morphMany(\App\Models\Embedding::class, 'entity', 'entity_type', 'entity_id');
+    }
+
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
 
     // Scopes - Type
