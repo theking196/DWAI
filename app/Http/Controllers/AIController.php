@@ -73,7 +73,7 @@ class AIController extends Controller
     }
     
     /**
-     * Generate image AI response with references.
+     * Generate image AI response - uses primary reference.
      */
     public function generateImage(Request $request): JsonResponse
     {
@@ -82,7 +82,7 @@ class AIController extends Controller
             'prompt' => 'required|string|min:1|max:2000',
             'size' => 'nullable|in:256x256,512x512,1024x1024',
             'model' => 'nullable|string',
-            'references' => 'nullable|json',
+            'reference_id' => 'nullable|exists:reference_images,id',
             'async' => 'nullable|boolean',
         ]);
         
@@ -93,13 +93,25 @@ class AIController extends Controller
             'model' => $validated['model'] ?? 'dall-e-3',
         ];
         
-        // Add reference images from project if not provided
-        $references = json_decode($validated['references'] ?? '[]', true);
+        // Get reference: specific one OR primary OR first available
+        $referenceId = $validated['reference_id'] ?? null;
         
-        if (empty($references)) {
-            $references = $session->project->referenceImages()
-                ->pluck('path')
-                ->toArray();
+        if ($referenceId) {
+            // Use specific reference
+            $reference = $session->project->referenceImages()->find($referenceId);
+            $references = $reference ? [$reference->path] : [];
+        } else {
+            // Try primary first, then first available
+            $primary = $session->project->referenceImages()
+                ->where('is_primary', true)
+                ->first();
+            
+            if ($primary) {
+                $references = [$primary->path];
+            } else {
+                $first = $session->project->referenceImages()->first();
+                $references = $first ? [$first->path] : [];
+            }
         }
         
         $options['references'] = $references;
@@ -111,7 +123,7 @@ class AIController extends Controller
                 'success' => true,
                 'message' => 'Image generation queued',
                 'status' => 'pending',
-                'references_used' => count($references),
+                'reference_used' => $referenceId ? 'specific' : ($primary->title ?? 'auto'),
             ]);
         }
         

@@ -16,6 +16,7 @@ class ReferenceImage extends Model
         'description',
         'path',
         'type',
+        'is_primary',
         'size',
         'mime_type',
     ];

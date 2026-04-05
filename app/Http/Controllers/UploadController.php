@@ -48,6 +48,7 @@ class UploadController extends Controller
             'title' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'type' => 'nullable|string|max:50',
+            'is_primary' => 'nullable|boolean',|max:50',
         ]);
         
         $project = Project::findOrFail($validated['project_id']);
@@ -107,8 +108,10 @@ class UploadController extends Controller
         $validated = $request->validate([
             'session_id' => 'required|exists:sessions,id',
             'result' => 'required',
-            'type' => 'required|string|max:50',
-            'model' => 'nullable|string|max:50',
+            'type' => 'required|string|'type' => 'nullable|string|max:50',
+            'is_primary' => 'nullable|boolean',
+            'model' => 'nullable|string|'type' => 'nullable|string|max:50',
+            'is_primary' => 'nullable|boolean',
         ]);
         
         $data = [
