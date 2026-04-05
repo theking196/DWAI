@@ -266,3 +266,84 @@ class AIOutput extends Model
             ->where('version', $this->version + 1)
             ->first();
     }
+
+    // ============================================================
+    // Session Memory Integration
+    // ============================================================
+
+    /**
+     * Save output to session memory as draft.
+     */
+    public function saveToSessionDraft(): void
+    {
+        $session = $this->session;
+        
+        // Append to draft text
+        $currentDraft = $session->draft_text ?? '';
+        $separator = $currentDraft ? "\n\n---\n\n" : "";
+        $session->updateDraftText($currentDraft . $separator . $this->result);
+        
+        $this->setMetadata('saved_to_draft', true);
+    }
+
+    /**
+     * Save output to session memory as reference.
+     */
+    public function saveToSessionReferences(): void
+    {
+        $session = $this->session;
+        
+        $ref = [
+            'output_id' => $this->id,
+            'type' => $this->type,
+            'preview' => $this->getResultPreview(100),
+            'model' => $this->model,
+            'added_at' => now()->toISOString(),
+        ];
+        
+        $session->addSessionReference($ref);
+        $this->setMetadata('saved_to_references', true);
+    }
+
+    /**
+     * Save output to session notes.
+     */
+    public function saveToSessionNotes(string $note = null): void
+    {
+        $session = $this->session;
+        
+        $noteText = $note ?? "Output #{$this->id} ({$this->type})";
+        $session->appendTempNotes($noteText . ": " . $this->getResultPreview(200));
+        
+        $this->setMetadata('saved_to_notes', true);
+    }
+
+    /**
+     * Promote this output to canon entry.
+     */
+    public function promoteToCanon(array $options = []): ?CanonEntry
+    {
+        $session = $this->session;
+        
+        return CanonCandidate::createFromSession($session, [
+            'title' => $options['title'] ?? "Output #{$this->id}",
+            'type' => $options['type'] ?? $this->mapTypeToCanon($this->type),
+            'content' => $this->result,
+            'tags' => $options['tags'] ?? ['from-output', $this->type],
+            'importance' => $options['importance'] ?? 'minor',
+        ]);
+    }
+
+    /**
+     * Map output type to canon type.
+     */
+    protected function mapTypeToCanon(string $outputType): string
+    {
+        return match($outputType) {
+            'text', 'scene_draft' => 'note',
+            'image' => 'artifact',
+            'storyboard' => 'timeline_event',
+            'director_notes' => 'lore',
+            default => 'note',
+        };
+    }

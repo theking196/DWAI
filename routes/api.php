@@ -779,3 +779,27 @@ Route::post('/outputs/{id}/versions/{version}/restore', function (int $id, int $
     return response()->json(['restored' => $restored ? true : false, 'new_version' => $restored?->version]);
 })->name('api.outputs.restore-version');
 
+
+
+# Output to session memory
+Route::post('/outputs/{id}/to-draft', function (int $id) {
+    $output = \App\Models\AIOutput::findOrFail($id);
+    if ($output->session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $output->saveToSessionDraft();
+    return response()->json(['saved' => true]);
+})->name('api.outputs.to-draft');
+
+Route::post('/outputs/{id}/to-references', function (int $id) {
+    $output = \App\Models\AIOutput::findOrFail($id);
+    if ($output->session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $output->saveToSessionReferences();
+    return response()->json(['saved' => true]);
+})->name('api.outputs.to-references');
+
+Route::post('/outputs/{id}/to-canon', function (Illuminate\Http\Request $request, int $id) {
+    $output = \App\Models\AIOutput::findOrFail($id);
+    if ($output->session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $candidate = $output->promoteToCanon($request->all());
+    return response()->json(['candidate_id' => $candidate->id]);
+})->name('api.outputs.to-canon');
+
