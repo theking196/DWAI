@@ -803,3 +803,26 @@ Route::post('/outputs/{id}/to-canon', function (Illuminate\Http\Request $request
     return response()->json(['candidate_id' => $candidate->id]);
 })->name('api.outputs.to-canon');
 
+
+
+# Output export
+Route::get('/outputs/{id}/export', function (Illuminate\Http\Request $request, int $id) {
+    $output = \App\Models\AIOutput::findOrFail($id);
+    if ($output->session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $format = $request->get('format', 'json');
+    $exporter = app(\App\Services\AI\OutputExporter::class);
+    $export = $exporter->export($output, $format);
+    if (!$export['success']) return response()->json($export, 400);
+    return response()->json($export);
+})->name('api.outputs.export');
+
+Route::get('/outputs/{id}/download', function (Illuminate\Http\Request $request, int $id) {
+    $output = \App\Models\AIOutput::findOrFail($id);
+    if ($output->session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $format = $request->get('format', 'json');
+    $exporter = app(\App\Services\AI\OutputExporter::class);
+    $path = $exporter->exportToFile($output, $format);
+    if (!$path) return response()->json(['error' => 'Export failed'], 400);
+    return response()->download(storage_path('app/' . $path))->deleteFileAfterSend(false);
+})->name('api.outputs.download');
+
