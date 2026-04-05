@@ -34,18 +34,13 @@ class AIController extends Controller
         
         $session = Session::with('project')->findOrFail($validated['session_id']);
         
-        // Check for async mode
+        $options = [
+            'model' => $validated['model'] ?? 'gpt-4',
+            'temperature' => $validated['temperature'] ?? 0.7,
+        ];
+        
         if ($validated['async'] ?? true) {
-            // Dispatch to queue
-            GenerateAIOutput::dispatch(
-                $session->id,
-                $validated['prompt'],
-                'text',
-                [
-                    'model' => $validated['model'] ?? 'gpt-4',
-                    'temperature' => $validated['temperature'] ?? 0.7,
-                ]
-            );
+            GenerateAIOutput::dispatch($session->id, $validated['prompt'], 'text', $options);
             
             return response()->json([
                 'success' => true,
@@ -54,16 +49,8 @@ class AIController extends Controller
             ]);
         }
         
-        // Sync mode (immediate)
         try {
-            $output = $this->ai->generateText(
-                $session,
-                $validated['prompt'],
-                [
-                    'model' => $validated['model'] ?? 'gpt-4',
-                    'temperature' => $validated['temperature'] ?? 0.7,
-                ]
-            );
+            $output = $this->ai->generateText($session, $validated['prompt'], $options);
             
             return response()->json([
                 'success' => true,
@@ -86,7 +73,7 @@ class AIController extends Controller
     }
     
     /**
-     * Generate image AI response (async via queue).
+     * Generate image AI response with references.
      */
     public function generateImage(Request $request): JsonResponse
     {
@@ -95,40 +82,41 @@ class AIController extends Controller
             'prompt' => 'required|string|min:1|max:2000',
             'size' => 'nullable|in:256x256,512x512,1024x1024',
             'model' => 'nullable|string',
+            'references' => 'nullable|json',
             'async' => 'nullable|boolean',
         ]);
         
         $session = Session::with('project')->findOrFail($validated['session_id']);
         
-        // Async mode (default)
+        $options = [
+            'size' => $validated['size'] ?? '1024x1024',
+            'model' => $validated['model'] ?? 'dall-e-3',
+        ];
+        
+        // Add reference images from project if not provided
+        $references = json_decode($validated['references'] ?? '[]', true);
+        
+        if (empty($references)) {
+            $references = $session->project->referenceImages()
+                ->pluck('path')
+                ->toArray();
+        }
+        
+        $options['references'] = $references;
+        
         if ($validated['async'] ?? true) {
-            GenerateAIOutput::dispatch(
-                $session->id,
-                $validated['prompt'],
-                'image',
-                [
-                    'size' => $validated['size'] ?? '1024x1024',
-                    'model' => $validated['model'] ?? 'dall-e-3',
-                ]
-            );
+            GenerateAIOutput::dispatch($session->id, $validated['prompt'], 'image', $options);
             
             return response()->json([
                 'success' => true,
                 'message' => 'Image generation queued',
                 'status' => 'pending',
+                'references_used' => count($references),
             ]);
         }
         
-        // Sync mode
         try {
-            $output = $this->ai->generateImage(
-                $session,
-                $validated['prompt'],
-                [
-                    'size' => $validated['size'] ?? '1024x1024',
-                    'model' => $validated['model'] ?? 'dall-e-3',
-                ]
-            );
+            $output = $this->ai->generateImage($session, $validated['prompt'], $options);
             
             return response()->json([
                 'success' => true,

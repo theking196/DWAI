@@ -83,3 +83,9 @@ Route::get('/ai/providers', [AIController::class, 'providers'])
 Route::get('/ai/outputs/{session}/status/{output}', [AIController::class, 'status'])
     ->name('ai.status');
 
+
+use App\Http\Controllers\ReferenceController;
+
+Route::get('/projects/{project}/references', [ReferenceController::class, 'forProject'])
+    ->name('projects.references');
+
