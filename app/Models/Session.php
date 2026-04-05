@@ -290,3 +290,89 @@ class Session extends Model
             'suggestion' => $this->hasContextAttribute ? 'Consider promoting to canon before closing' : 'No memory to preserve',
         ];
     }
+
+    // ============================================================
+    // Visual Style Override
+    // ============================================================
+
+    /**
+     * Override visual style for this session.
+     */
+    public function setStyleOverride(?string $imagePath, ?string $description = null): void
+    {
+        $this->update([
+            'style_override' => [
+                'image_path' => $imagePath,
+                'description' => $description,
+            ],
+        ]);
+    }
+
+    /**
+     * Clear style override.
+     */
+    public function clearStyleOverride(): void
+    {
+        $this->update(['style_override' => null]);
+    }
+
+    /**
+     * Check if session has style override.
+     */
+    public function hasStyleOverride(): bool
+    {
+        $override = $this->style_override;
+        return !empty($override['image_path']) || !empty($override['description']);
+    }
+
+    /**
+     * Get effective style (override or project default).
+     */
+    public function getEffectiveStyle(): array
+    {
+        // Return override if exists
+        if ($this->hasStyleOverride()) {
+            return [
+                'image_url' => $this->getStyleOverrideUrl(),
+                'description' => $this->getStyleOverrideDescription(),
+                'source' => 'session_override',
+            ];
+        }
+
+        // Fall back to project style
+        $project = $this->project;
+        if ($project && $project->hasVisualStyle()) {
+            return [
+                'image_url' => $project->getVisualStyleUrl(),
+                'description' => $project->getVisualStyleDescription(),
+                'source' => 'project',
+            ];
+        }
+
+        return [
+            'image_url' => null,
+            'description' => null,
+            'source' => 'none',
+        ];
+    }
+
+    /**
+     * Get style override image URL.
+     */
+    public function getStyleOverrideUrl(): ?string
+    {
+        $override = $this->style_override;
+        if (empty($override['image_path'])) {
+            return null;
+        }
+        return asset('storage/' . $override['image_path']);
+    }
+
+    /**
+     * Get style override description.
+     */
+    public function getStyleOverrideDescription(): ?string
+    {
+        $override = $this->style_override;
+        return $override['description'] ?? null;
+    }
