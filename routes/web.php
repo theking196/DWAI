@@ -9,49 +9,48 @@ use App\Http\Controllers\Web\SessionController;
 use App\Http\Controllers\Web\UploadController;
 use Illuminate\Support\Facades\Route;
 
-// Public routes (no auth required)
+// Public routes
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// Protected routes (auth required)
+// Protected routes (any authenticated user)
 Route::middleware('auth')->group(function () {
-    // Dashboard
+    // Dashboard - viewer+
     Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
     
-    // Projects
+    // Projects - viewer+
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
-    Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
     
-    // References
+    // Project deletion - admin only
+    Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy')->middleware('role:admin');
+    
+    // References - viewer+
     Route::get('/projects/{project}/references', [ReferenceController::class, 'forProject'])->name('projects.references');
-    Route::post('/projects/{project}/references/primary', [ReferenceController::class, 'setPrimary'])->name('projects.references.primary');
+    Route::post('/projects/{project}/references/primary', [ReferenceController::class, 'setPrimary'])->name('projects.references.primary')->middleware('role:editor');
     
-    // Sessions
+    // Sessions - viewer+
     Route::get('/sessions', [SessionController::class, 'index'])->name('sessions.index');
     Route::get('/sessions/create', [SessionController::class, 'create'])->name('sessions.create');
     Route::post('/sessions', [SessionController::class, 'store'])->name('sessions.store');
     Route::get('/sessions/{session}', [SessionController::class, 'show'])->name('sessions.show');
     
-    // Uploads
-    Route::post('/upload/project-style', [UploadController::class, 'projectStyle'])->name('upload.project-style');
-    Route::post('/upload/reference', [UploadController::class, 'reference'])->name('upload.reference');
-    Route::delete('/upload/reference/{id}', [UploadController::class, 'deleteReference'])->name('upload.reference.delete');
+    // Uploads - editor+
+    Route::post('/upload/project-style', [UploadController::class, 'projectStyle'])->name('upload.project-style')->middleware('role:editor');
+    Route::post('/upload/reference', [UploadController::class, 'reference'])->name('upload.reference')->middleware('role:editor');
+    Route::delete('/upload/reference/{id}', [UploadController::class, 'deleteReference'])->name('upload.reference.delete')->middleware('role:editor');
     
-    // AI
-    Route::post('/ai/generate/text', [AIController::class, 'generateText'])->name('ai.generate.text');
-    Route::post('/ai/generate/image', [AIController::class, 'generateImage'])->name('ai.generate.image');
-    Route::get('/ai/outputs/{session}', [AIController::class, 'outputs'])->name('ai.outputs');
-    Route::get('/ai/outputs/{session}/status/{output}', [AIController::class, 'status'])->name('ai.status');
+    // AI generation - editor+
+    Route::post('/ai/generate/text', [AIController::class, 'generateText'])->name('ai.generate.text')->middleware('role:editor');
+    Route::post('/ai/generate/image', [AIController::class, 'generateImage'])->name('ai.generate.image')->middleware('role:editor');
+    Route::get('/ai/outputs/{session}', [AIController::class, 'outputs'])->name('ai.outputs')->middleware('role:viewer');
+    Route::get('/ai/outputs/{session}/status/{output}', [AIController::class, 'status'])->name('ai.status')->middleware('role:viewer');
 });
 
-// Home - redirect to login if not authenticated, else dashboard
+// Home
 Route::get('/', function () {
-    if (auth()->check()) {
-        return redirect()->route('dashboard');
-    }
-    return redirect()->route('login');
+    return auth()->check() ? redirect()->route('dashboard') : redirect()->route('login');
 })->name('home');

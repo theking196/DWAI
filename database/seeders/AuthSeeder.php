@@ -10,11 +10,28 @@ class AuthSeeder extends Seeder
 {
     public function run(): void
     {
-        // Default local user
+        // Admin - full access
         User::create([
-            'name' => 'Developer',
-            'email' => 'dev@local',
-            'password' => Hash::make('password'),
+            'name' => 'Admin',
+            'email' => 'admin@local',
+            'password' => Hash::make('admin123'),
+            'role' => 'admin',
+        ]);
+
+        // Editor - can edit, cannot delete
+        User::create([
+            'name' => 'Editor',
+            'email' => 'editor@local',
+            'password' => Hash::make('editor123'),
+            'role' => 'editor',
+        ]);
+
+        // Viewer - read only
+        User::create([
+            'name' => 'Viewer',
+            'email' => 'viewer@local',
+            'password' => Hash::make('viewer123'),
+            'role' => 'viewer',
         ]);
     }
 }

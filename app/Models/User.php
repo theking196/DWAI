@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 class User extends Authenticatable
 {
@@ -15,6 +14,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
     ];
 
     protected $hidden = [
@@ -23,7 +23,55 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'email_verified_at' => 'datetime',
     ];
+
+    /**
+     * Check if user is admin.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Check if user can edit (admin or editor).
+     */
+    public function canEdit(): bool
+    {
+        return in_array($this->role, ['admin', 'editor']);
+    }
+
+    /**
+     * Check if user can delete (admin only).
+     */
+    public function canDelete(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Check if user can manage settings (admin only).
+     */
+    public function canManageSettings(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Check if user can edit canon entries.
+     */
+    public function canEditCanon(): bool
+    {
+        return in_array($this->role, ['admin', 'editor']);
+    }
+
+    /**
+     * Check if user is viewer (read-only).
+     */
+    public function isViewer(): bool
+    {
+        return $this->role === 'viewer';
+    }
 }
