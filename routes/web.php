@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AIController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SessionController;
@@ -65,3 +66,16 @@ Route::delete('/upload/reference/{id}', [UploadController::class, 'deleteReferen
 
 Route::post('/upload/session-output', [UploadController::class, 'sessionOutput'])
     ->name('upload.session-output');
+
+// AI Generation
+Route::post('/ai/generate/text', [AIController::class, 'generateText'])
+    ->name('ai.generate.text');
+
+Route::post('/ai/generate/image', [AIController::class, 'generateImage'])
+    ->name('ai.generate.image');
+
+Route::get('/ai/outputs/{session}', [AIController::class, 'outputs'])
+    ->name('ai.outputs');
+
+Route::get('/ai/providers', [AIController::class, 'providers'])
+    ->name('ai.providers');
