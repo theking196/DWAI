@@ -581,3 +581,17 @@ Route::post('/timeline/{id}/move', function (Illuminate\Http\Request $request, i
     return response()->json(['moved' => true]);
 })->name('api.timeline.move');
 
+
+
+Route::post('/continuity/check', function (Illuminate\Http\Request $request) {
+    $request->validate(['project_id' => 'required|integer', 'characters' => 'nullable|array', 'timeline_event' => 'nullable|array', 'locations' => 'nullable|array', 'session_id' => 'nullable|integer']);
+    $service = app(\App\Services\AI\ContinuityService::class);
+    $result = $service->checkContinuity($request->project_id, $request->all());
+    return response()->json($result);
+})->name('api.continuity.check');
+
+Route::get('/continuity/{project}/summary', function (int $project) {
+    $service = app(\App\Services\AI\ContinuityService::class);
+    return response()->json($service->getProjectContinuitySummary($project));
+})->name('api.continuity.summary');
+
