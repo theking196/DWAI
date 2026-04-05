@@ -12,9 +12,10 @@ class ProjectFactory extends Factory
     public function definition(): array
     {
         return [
+            'user_id' => 1,
             'name' => $this->faker->sentence(3),
             'description' => $this->faker->paragraph(),
-            'type' => $this->faker->randomElement(['Film', 'Comic', 'Music Video']),
+            'type' => $this->faker->randomElement(['Film', 'Comic', 'Music Video', 'TV Series', 'Short Film']),
             'thumbnail' => null,
             'visual_style_image' => null,
             'progress' => $this->faker->numberBetween(0, 100),
@@ -24,11 +25,22 @@ class ProjectFactory extends Factory
 
     public function boyWonder(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn() => [
             'name' => 'Boy Wonder',
-            'description' => 'A young hero\'s journey from ordinary to extraordinary in modern Lagos.',
+            'description' => 'A young hero\'s journey from ordinary to extraordinary in modern Lagos. A superhero comic series exploring identity and responsibility.',
             'type' => 'Comic',
             'progress' => 35,
+            'status' => 'active',
+        ]);
+    }
+
+    public function neuralNet(): static
+    {
+        return $this->state(fn() => [
+            'name' => 'Neural Net',
+            'description' => 'A sci-fi thriller about an AI consciousness awakening in a dystopian future.',
+            'type' => 'TV Series',
+            'progress' => 20,
             'status' => 'active',
         ]);
     }

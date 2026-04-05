@@ -13,21 +13,13 @@ class SessionFactory extends Factory
     public function definition(): array
     {
         return [
+            'user_id' => 1,
             'project_id' => Project::factory(),
             'name' => $this->faker->sentence(4),
             'description' => $this->faker->paragraph(),
             'type' => $this->faker->randomElement(['brainstorm', 'script', 'storyboard', 'edit']),
-            'status' => $this->faker->randomElement(['active', 'completed', 'archived']),
-            'output_count' => $this->faker->numberBetween(0, 20),
+            'status' => $this->faker->randomElement(['active', 'completed']),
+            'output_count' => $this->faker->numberBetween(0, 10),
         ];
-    }
-
-    public function episode(): static
-    {
-        return $this->state(fn(array $attributes) => [
-            'name' => 'Episode ' . $this->faker->numberBetween(1, 10),
-            'type' => 'script',
-            'status' => 'active',
-        ]);
     }
 }

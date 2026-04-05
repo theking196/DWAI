@@ -10,7 +10,7 @@ class AuthSeeder extends Seeder
 {
     public function run(): void
     {
-        // Admin - full access
+        // Admin
         User::create([
             'name' => 'Admin',
             'email' => 'admin@local',
@@ -18,7 +18,7 @@ class AuthSeeder extends Seeder
             'role' => 'admin',
         ]);
 
-        // Editor - can edit, cannot delete
+        // Editor
         User::create([
             'name' => 'Editor',
             'email' => 'editor@local',
@@ -26,7 +26,7 @@ class AuthSeeder extends Seeder
             'role' => 'editor',
         ]);
 
-        // Viewer - read only
+        // Viewer
         User::create([
             'name' => 'Viewer',
             'email' => 'viewer@local',
