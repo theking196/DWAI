@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\CanonCandidate;
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -190,5 +192,14 @@ class Session extends Model
     {
         return ['id' => $this->id, 'name' => $this->name, 'type' => $this->type, 'status' => $this->status, 'output_count' => $this->output_count,
             'project_name' => $this->project->name ?? null, 'short_term_memory' => $this->getShortTermMemory(), 'created_at' => $this->created_at, 'updated_at' => $this->updated_at];
+    }
+}
+
+
+
+    // Promote session data to canon candidate
+    public function promoteToCanon(array $data): CanonCandidate
+    {
+        return CanonCandidate::createFromSession($this, $data);
     }
 }

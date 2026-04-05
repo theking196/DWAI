@@ -87,3 +87,17 @@ Route::get('/canon/{project}/tags', function (int $project) {
     $tags = \App\Models\CanonEntry::getProjectTags($project);
     return response()->json(['tags' => $tags]);
 })->name('api.canon.tags');
+
+
+use App\Http\Controllers\Api\CanonCandidateController;
+
+Route::get('/canon-candidates/{project}', [CanonCandidateController::class, 'index'])->name('api.canon-candidates.index');
+Route::post('/canon-candidates', [CanonCandidateController::class, 'store'])->name('api.canon-candidates.store');
+Route::get('/canon-candidates/{id}', [CanonCandidateController::class, 'show'])->name('api.canon-candidates.show');
+Route::put('/canon-candidates/{id}', [CanonCandidateController::class, 'update'])->name('api.canon-candidates.update');
+Route::post('/canon-candidates/{id}/approve', [CanonCandidateController::class, 'approve'])->name('api.canon-candidates.approve');
+Route::post('/canon-candidates/{id}/edit-approve', [CanonCandidateController::class, 'editAndApprove'])->name('api.canon-candidates.edit-approve');
+Route::post('/canon-candidates/{id}/reject', [CanonCandidateController::class, 'reject'])->name('api.canon-candidates.reject');
+Route::post('/canon-candidates/from-session/{sessionId}', [CanonCandidateController::class, 'createFromSession'])->name('api.canon-candidates.from-session');
+Route::get('/canon-candidates/{project}/stats', [CanonCandidateController::class, 'stats'])->name('api.canon-candidates.stats');
+
