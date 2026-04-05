@@ -181,3 +181,88 @@ class AIOutput extends Model
             'status' => 'completed',
         ]);
     }
+
+    // ============================================================
+    // Versioning
+    // ============================================================
+
+    /**
+     * Create a new version of this output.
+     */
+    public function createNewVersion(string $newResult, ?string $reason = null): self
+    {
+        // Mark current as not current
+        $this->update(['is_current' => false]);
+
+        // Create new version
+        return self::create([
+            'session_id' => $this->session_id,
+            'prompt' => $this->prompt,
+            'result' => $newResult,
+            'type' => $this->type,
+            'model' => $this->model,
+            'metadata' => array_merge($this->metadata ?? [], [
+                'previous_version' => $this->version,
+                'version_note' => $reason,
+            ]),
+            'status' => 'completed',
+            'version' => $this->version + 1,
+            'parent_output_id' => $this->id,
+            'is_current' => true,
+        ]);
+    }
+
+    /**
+     * Get all versions of this output.
+     */
+    public function getVersionHistory(): \Illuminate\Database\Eloquent\Collection
+    {
+        return self::where('parent_output_id', $this->id)
+            ->orWhere('id', $this->id)
+            ->orderBy('version', 'desc')
+            ->get();
+    }
+
+    /**
+     * Get specific version.
+     */
+    public function getVersion(int $version): ?self
+    {
+        return self::where('parent_output_id', $this->id)
+            ->where('version', $version)
+            ->first();
+    }
+
+    /**
+     * Restore to a specific version (creates new current version).
+     */
+    public function restoreToVersion(int $version): ?self
+    {
+        $oldVersion = $this->getVersion($version);
+        
+        if (!$oldVersion) {
+            return null;
+        }
+
+        return $this->createNewVersion($oldVersion->result, "Restored from v{$version}");
+    }
+
+    /**
+     * Get previous version.
+     */
+    public function getPreviousVersion(): ?self
+    {
+        return self::where('parent_output_id', $this->parent_output_id)
+            ->where('version', $this->version - 1)
+            ->first();
+    }
+
+    /**
+     * Get next version.
+     */
+    public function getNextVersion(): ?self
+    {
+        return self::where('parent_output_id', $this->parent_output_id)
+            ->where('version', $this->version + 1)
+            ->first();
+    }

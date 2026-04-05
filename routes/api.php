@@ -755,3 +755,27 @@ Route::get('/conflicts/{id}/suggest', function (int $id) {
     return response()->json(array_merge($suggestions, ['explanation' => $explanation]));
 })->name('api.conflicts.suggest');
 
+
+
+# Output versioning
+Route::get('/outputs/{id}/versions', function (int $id) {
+    $output = \App\Models\AIOutput::findOrFail($id);
+    if ($output->session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    return response()->json($output->getVersionHistory()->map(fn($o) => $o->getSummary()));
+})->name('api.outputs.versions');
+
+Route::post('/outputs/{id}/versions', function (Illuminate\Http\Request $request, int $id) {
+    $output = \App\Models\AIOutput::findOrFail($id);
+    if ($output->session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $request->validate(['result' => 'required|string', 'reason' => 'nullable|string']);
+    $newVersion = $output->createNewVersion($request->result, $request->reason);
+    return response()->json(['version' => $newVersion->version, 'id' => $newVersion->id]);
+})->name('api.outputs.create-version');
+
+Route::post('/outputs/{id}/versions/{version}/restore', function (int $id, int $version) {
+    $output = \App\Models\AIOutput::findOrFail($id);
+    if ($output->session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $restored = $output->restoreToVersion($version);
+    return response()->json(['restored' => $restored ? true : false, 'new_version' => $restored?->version]);
+})->name('api.outputs.restore-version');
+
