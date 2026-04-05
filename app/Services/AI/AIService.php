@@ -8,33 +8,45 @@ use Illuminate\Support\Facades\Log;
 
 class AIService
 {
-    protected ?AIProviderInterface $provider = null;
-    protected string $defaultProvider = 'mock';
+    protected array $providers = [];
+    protected array $featureMap = [];
+    protected bool $localOnly;
 
     public function __construct()
     {
-        $this->provider = $this->resolveProvider();
+        $this->localOnly = config('ai.local_only', true);
+        $this->featureMap = config('ai.features', []);
+        $this->initializeProviders();
     }
 
     /**
-     * Resolve the active provider.
+     * Initialize all configured providers.
      */
-    protected function resolveProvider(): AIProviderInterface
+    protected function initializeProviders(): void
     {
-        // Load from config or env
-        $providerName = config('ai.provider', $this->defaultProvider);
-
-        return $this->createProvider($providerName);
+        $providers = config('ai.providers', []);
+        
+        foreach ($providers as $name => $config) {
+            if ($config['enabled'] ?? false) {
+                $this->providers[$name] = $this->createProvider($name);
+            }
+        }
     }
 
     /**
-     * Create a provider instance.
+     * Create provider instance.
      */
     protected function createProvider(string $name): AIProviderInterface
     {
+        // Local-only mode blocks external providers
+        if ($this->localOnly && $name !== 'mock') {
+            Log::warning("AI: Provider {$name} blocked by local_only mode");
+            return new MockProvider();
+        }
+
         return match(strtolower($name)) {
             'mock' => new MockProvider(),
-            // Future providers:
+            // Future:
             // 'openai' => new OpenAIProvider(),
             // 'anthropic' => new AnthropicProvider(),
             // 'replicate' => new ReplicateProvider(),
@@ -44,41 +56,45 @@ class AIService
     }
 
     /**
-     * Get the current provider.
+     * Get provider for a specific feature.
      */
-    public function getProvider(): AIProviderInterface
+    protected function getProviderForFeature(string $feature): AIProviderInterface
     {
-        return $this->provider;
+        $featureConfig = $this->featureMap[$feature] ?? [];
+        $providerName = $featureConfig['provider'] ?? config('ai.provider', 'mock');
+        $fallback = $featureConfig['fallback'] ?? 'mock';
+
+        // Check if provider is available
+        if (isset($this->providers[$providerName])) {
+            return $this->providers[$providerName];
+        }
+
+        // Try fallback
+        if ($providerName !== $fallback && isset($this->providers[$fallback])) {
+            return $this->providers[$fallback];
+        }
+
+        // Default to mock
+        return new MockProvider();
     }
 
     /**
-     * Switch provider at runtime.
-     */
-    public function setProvider(string $name): void
-    {
-        $this->provider = $this->createProvider($name);
-    }
-
-    /**
-     * Generate text content.
-     * 
-     * @param string $prompt The main prompt
-     * @param array $context Context data (project, session, canon, references)
-     * @return array Result with content, model, metadata
+     * Generate text using the configured text provider.
      */
     public function generateText(string $prompt, array $context = []): array
     {
         $context = $this->prepareContext($context);
-        
-        Log::info('AI: Generating text', [
+        $provider = $this->getProviderForFeature('text');
+
+        Log::info('AI: Text generation', [
+            'provider' => $provider->getName(),
             'prompt_length' => strlen($prompt),
-            'context_keys' => array_keys($context),
         ]);
 
-        $result = $this->provider->generateText($prompt, $context);
-
+        $result = $provider->generateText($prompt, $context);
+        
         if ($result['success']) {
-            Log::info('AI: Text generated', ['model' => $result['model']]);
+            Log::info('AI: Text generated', ['model' => $result['model'] ?? 'unknown']);
         } else {
             Log::error('AI: Text generation failed', ['error' => $result['error'] ?? 'Unknown']);
         }
@@ -87,26 +103,22 @@ class AIService
     }
 
     /**
-     * Generate image(s) from prompt.
-     * 
-     * @param string $prompt Image description
-     * @param array $references Reference images/URLs
-     * @return array Result with images array
+     * Generate image using the configured image provider.
      */
     public function generateImage(string $prompt, array $references = []): array
     {
-        Log::info('AI: Generating image', [
+        $provider = $this->getProviderForFeature('image');
+
+        Log::info('AI: Image generation', [
+            'provider' => $provider->getName(),
             'prompt_length' => strlen($prompt),
             'reference_count' => count($references),
         ]);
 
-        $result = $this->provider->generateImage($prompt, $references);
+        $result = $provider->generateImage($prompt, $references);
 
         if ($result['success']) {
-            Log::info('AI: Image generated', [
-                'image_count' => count($result['images'] ?? []),
-                'model' => $result['model'],
-            ]);
+            Log::info('AI: Image generated', ['image_count' => count($result['images'] ?? [])]);
         } else {
             Log::error('AI: Image generation failed', ['error' => $result['error'] ?? 'Unknown']);
         }
@@ -115,28 +127,22 @@ class AIService
     }
 
     /**
-     * Generate storyboard with multiple frames.
-     * 
-     * @param string $prompt Storyboard description
-     * @param array $context Context (frame_count, style, etc.)
-     * @return array Result with frames array
+     * Generate storyboard using the configured storyboard provider.
      */
     public function generateStoryboard(string $prompt, array $context = []): array
     {
         $context = $this->prepareContext($context);
+        $provider = $this->getProviderForFeature('storyboard');
 
-        Log::info('AI: Generating storyboard', [
-            'prompt_length' => strlen($prompt),
+        Log::info('AI: Storyboard generation', [
+            'provider' => $provider->getName(),
             'frame_count' => $context['frame_count'] ?? 4,
         ]);
 
-        $result = $this->provider->generateStoryboard($prompt, $context);
+        $result = $provider->generateStoryboard($prompt, $context);
 
         if ($result['success']) {
-            Log::info('AI: Storyboard generated', [
-                'frame_count' => $result['total_frames'],
-                'model' => $result['model'],
-            ]);
+            Log::info('AI: Storyboard generated', ['frame_count' => $result['total_frames'] ?? 0]);
         } else {
             Log::error('AI: Storyboard generation failed', ['error' => $result['error'] ?? 'Unknown']);
         }
@@ -145,38 +151,39 @@ class AIService
     }
 
     /**
-     * Prepare context by enriching with project/session data.
+     * Prepare context with project/session data.
      */
     protected function prepareContext(array $context): array
     {
-        // Add default frame count if not set
         if (!isset($context['frame_count'])) {
-            $context['frame_count'] = 4;
+            $context['frame_count'] = config('ai.defaults.storyboard.frame_count', 4);
         }
 
-        // Add style references if project provided
+        // Add style images from project
         if (isset($context['project']) && $context['project']) {
             $project = $context['project'];
             
-            if ($project->style_image_path) {
-                $context['style_images'] = [
-                    ['url' => asset('storage/' . $project->style_image_path)]
-                ];
+            $styleImages = [];
+            if (!empty($project->style_image_path)) {
+                $styleImages[] = ['url' => asset('storage/' . $project->style_image_path)];
             }
-
-            if ($project->style_images) {
-                $context['style_images'] = array_merge(
-                    $context['style_images'] ?? [],
-                    array_map(fn($img) => ['url' => asset('storage/' . $img['path'])], $project->style_images)
-                );
+            if (!empty($project->style_images)) {
+                foreach ($project->style_images as $img) {
+                    if (!empty($img['path'])) {
+                        $styleImages[] = ['url' => asset('storage/' . $img['path'])];
+                    }
+                }
+            }
+            if (!empty($styleImages)) {
+                $context['style_images'] = $styleImages;
             }
         }
 
-        // Add canon entries if session provided
+        // Add canon entries from session
         if (isset($context['session']) && $context['session']) {
             $session = $context['session'];
             
-            if ($session->project && $session->project->canonEntries) {
+            if ($session->project) {
                 $context['canon'] = $session->project->canonEntries()
                     ->select('id', 'title', 'type', 'content')
                     ->limit(10)
@@ -193,18 +200,48 @@ class AIService
      */
     public function isAvailable(): bool
     {
-        return $this->provider->isAvailable();
+        return !empty($this->providers);
     }
 
     /**
-     * Get provider info.
+     * Get system info.
      */
     public function getInfo(): array
     {
+        $textProvider = $this->getProviderForFeature('text');
+        $imageProvider = $this->getProviderForFeature('image');
+        $storyboardProvider = $this->getProviderForFeature('storyboard');
+
         return [
-            'provider' => $this->provider->getName(),
-            'available' => $this->provider->isAvailable(),
-            'features' => $this->provider->getSupportedFeatures(),
+            'local_only' => $this->localOnly,
+            'providers' => [
+                'text' => $textProvider->getName(),
+                'image' => $imageProvider->getName(),
+                'storyboard' => $storyboardProvider->getName(),
+            ],
+            'features' => [
+                'text' => $textProvider->getSupportedFeatures(),
+                'image' => $imageProvider->getSupportedFeatures(),
+                'storyboard' => $storyboardProvider->getSupportedFeatures(),
+            ],
         ];
+    }
+
+    /**
+     * Switch to a different provider.
+     */
+    public function setProvider(string $name): void
+    {
+        config(['ai.provider' => $name]);
+    }
+
+    /**
+     * Set provider for specific feature.
+     */
+    public function setFeatureProvider(string $feature, string $provider): void
+    {
+        $features = config('ai.features', []);
+        $features[$feature]['provider'] = $provider;
+        config(['ai.features' => $features]);
     }
 }
