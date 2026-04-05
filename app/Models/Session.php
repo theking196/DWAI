@@ -12,6 +12,7 @@ class Session extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'project_id',
         'name',
         'description',
@@ -24,9 +25,18 @@ class Session extends Model
         'output_count' => 'integer',
     ];
 
+    // ============================================================
+    // Relationships
+    // ============================================================
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function aiOutputs(): HasMany
@@ -39,6 +49,15 @@ class Session extends Model
         return $this->hasMany(TimelineEvent::class);
     }
 
+    public function conflicts(): HasMany
+    {
+        return $this->hasMany(Conflict::class);
+    }
+
+    // ============================================================
+    // Scopes & Helpers
+    // ============================================================
+
     public function isActive(): bool
     {
         return $this->status === 'active';
@@ -47,5 +66,15 @@ class Session extends Model
     public function isCompleted(): bool
     {
         return $this->status === 'completed';
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    public function scopeCompleted($query)
+    {
+        return $query->where('status', 'completed');
     }
 }
