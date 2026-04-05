@@ -118,11 +118,28 @@
                     <h3>📷 Visual Style</h3>
                 </div>
                 <div class="panel-body">
+                    @if($project->visual_style_image)
+                    <div class="current-image-preview">
+                        <img src="{{ Storage::url($project->visual_style_image) }}" alt="Visual style">
+                        <button type="button" class="btn-remove" onclick="removeStyle()">&times;</button>
+                    </div>
+                    @else
                     <div class="style-preview">
                         <span class="style-placeholder">🎨</span>
-                        <p class="muted">Inherits from project</p>
+                        <p class="muted">Upload visual style reference</p>
                     </div>
-                    <button class="btn btn-secondary btn-sm w-full">Update Style</button>
+                    @endif
+                    
+                    <form action="{{ route('upload.project-style') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+                        @csrf
+                        <input type="hidden" name="project_id" value="{{ $project->id }}">
+                        <div class="file-input-wrapper">
+                            <input type="file" name="image" accept="image/*" onchange="previewAndSubmit(this)">
+                            <button type="button" class="btn btn-secondary btn-sm w-full">
+                                {{ $project->visual_style_image ? 'Replace' : 'Update Style' }}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
             

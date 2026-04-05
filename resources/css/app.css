@@ -352,3 +352,46 @@ body {
         display: none;
     }
 }
+/* Image Preview */
+.current-image-preview {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--dark-surface);
+    margin-bottom: var(--space-sm);
+}
+
+.current-image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.current-image-preview .btn-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.file-input-wrapper {
+    position: relative;
+}
+
+.file-input-wrapper input[type="file"] {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}

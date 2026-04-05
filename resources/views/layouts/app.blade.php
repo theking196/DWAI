@@ -122,5 +122,35 @@
     
     {{-- Vite JS --}}
     @vite(['resources/js/app.js'])
+<script>
+function previewAndSubmit(input) {
+    if (input.files && input.files[0]) {
+        // Show preview
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var panelBody = input.closest(".panel-body");
+            var preview = panelBody.querySelector(".style-preview, .current-image-preview");
+            if (preview && !preview.querySelector("img")) {
+                preview.innerHTML = "<img src=\"" + e.target.result + "\" alt=\"Preview\">";
+            } else if (preview && preview.querySelector("img")) {
+                preview.querySelector("img").src = e.target.result;
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+        
+        // Auto-submit after brief delay
+        setTimeout(function() {
+            input.closest("form").submit();
+        }, 500);
+    }
+}
+
+function removeStyle() {
+    if (confirm("Remove visual style image?")) {
+        // Could add delete endpoint here
+        location.reload();
+    }
+}
+</script>
 </body>
 </html>
