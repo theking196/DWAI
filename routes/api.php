@@ -126,3 +126,54 @@ Route::get('/assets/{project}/stats', [AssetController::class, 'stats'])->name('
 Route::post('/assets/{id}/tag', [AssetController::class, 'addTag'])->name('api.assets.add-tag');
 Route::get('/assets/{project}/tags', [AssetController::class, 'projectTags'])->name('api.assets.project-tags');
 
+
+
+Route::post('/projects/{project}/style-image', function (Illuminate\Http\Request $request, int $project) {
+    $project = \App\Models\Project::findOrFail($project);
+    if ($project->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    
+    $request->validate(['image' => 'required|image|max:10240', 'title' => 'nullable|string|max:255']);
+    $path = $request->file('image')->store('styles/' . $project->id, 'public');
+    $project->setStyleImage($path, $request->title);
+    
+    return response()->json(['url' => $project->style_image_url]);
+})->name('api.projects.style-image');
+
+Route::post('/projects/{project}/style-images', function (Illuminate\Http\Request $request, int $project) {
+    $project = \App\Models\Project::findOrFail($project);
+    if ($project->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    
+    $request->validate(['image' => 'required|image|max:10240', 'title' => 'nullable|string|max:255']);
+    $path = $request->file('image')->store('styles/' . $project->id, 'public');
+    $project->addStyleImage($path, $request->title);
+    
+    return response()->json(['images' => $project->getStyleImagesWithUrls()]);
+})->name('api.projects.style-images-add');
+
+Route::delete('/projects/{project}/style-images/{index}', function (int $project, int $index) {
+    $project = \App\Models\Project::findOrFail($project);
+    if ($project->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    
+    $project->removeStyleImage($index);
+    return response()->json(['images' => $project->getStyleImagesWithUrls()]);
+})->name('api.projects.style-images-remove');
+
+Route::put('/projects/{project}/style-notes', function (Illuminate\Http\Request $request, int $project) {
+    $project = \App\Models\Project::findOrFail($project);
+    if ($project->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    
+    $project->setStyleNotes($request->notes);
+    return response()->json(['style_notes' => $project->style_notes]);
+})->name('api.projects.style-notes');
+
+Route::get('/projects/{project}/style', function (int $project) {
+    $project = \App\Models\Project::findOrFail($project);
+    if ($project->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    
+    return response()->json([
+        'main_image' => ['url' => $project->style_image_url, 'title' => $project->style_image_title],
+        'supporting_images' => $project->getStyleImagesWithUrls(),
+        'notes' => $project->style_notes,
+    ]);
+})->name('api.projects.style');
+

@@ -283,3 +283,73 @@ class Project extends Model
         $this->update(['tags' => array_filter($tags, fn($t) => $t !== $tag)]);
     }
 }
+
+    // ============================================================
+    // Visual Style
+    // ============================================================
+
+    public function setStyleImage(string $path, ?string $title = null): void
+    {
+        $this->update([
+            'style_image_path' => $path,
+            'style_image_title' => $title,
+        ]);
+    }
+
+    public function getStyleImageUrlAttribute(): ?string
+    {
+        return $this->style_image_path ? asset('storage/' . $this->style_image_path) : null;
+    }
+
+    public function addStyleImage(string $path, ?string $title = null): void
+    {
+        $images = $this->style_images ?? [];
+        $images[] = [
+            'path' => $path,
+            'title' => $title,
+            'added_at' => now()->toISOString(),
+        ];
+        $this->update(['style_images' => $images]);
+    }
+
+    public function removeStyleImage(int $index): void
+    {
+        $images = $this->style_images ?? [];
+        if (isset($images[$index])) {
+            unset($images[$index]);
+            $this->update(['style_images' => array_values($images)]);
+        }
+    }
+
+    public function setStyleNotes(string $notes): void
+    {
+        $this->update(['style_notes' => $notes]);
+    }
+
+    public function getStyleImagesWithUrls(): array
+    {
+        $images = [];
+        
+        // Main style image
+        if ($this->style_image_path) {
+            $images[] = [
+                'type' => 'main',
+                'title' => $this->style_image_title,
+                'url' => $this->style_image_url,
+                'path' => $this->style_image_path,
+            ];
+        }
+        
+        // Supporting images
+        foreach (($this->style_images ?? []) as $index => $img) {
+            $images[] = [
+                'type' => 'supporting',
+                'index' => $index,
+                'title' => $img['title'] ?? null,
+                'url' => isset($img['path']) ? asset('storage/' . $img['path']) : null,
+                'path' => $img['path'] ?? null,
+            ];
+        }
+        
+        return $images;
+    }
