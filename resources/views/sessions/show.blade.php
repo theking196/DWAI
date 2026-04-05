@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Session: Origin Story - DWAI Studio')
+@section('title', 'Session: ' . ($session->name ?? 'Session') . ' - DWAI Studio')
 
 @section('breadcrumb')
     <a href="{{ route('projects.index') }}">Projects</a> /
-    <a href="{{ route('projects.show', 1) }}">Boy Wonder</a> /
-    <span class="breadcrumb-item">Origin Story</span>
+    <a href="{{ route('projects.show', $project->id) }}">{{ $project->name }}</a> /
+    <span class="breadcrumb-item">{{ $session->name ?? 'Session' }}</span>
 @endsection
 
 @section('content')
@@ -13,51 +13,89 @@
     <!-- Session Header -->
     <div class="workspace-header">
         <div class="workspace-title">
-            <h1 id="session-title">Origin Story</h1>
-            <span class="session-type-badge" id="session-type">brainstorm</span>
+            <h1 id="session-title">{{ $session->name }}</h1>
+            <span class="session-type-badge" id="session-type">{{ $session->type }}</span>
         </div>
         <div class="workspace-stats">
-            <span>💭 <span id="stat-prompt">12</span> prompts</span>
-            <span>🎬 <span id="stat-output">5</span> outputs</span>
+            <span>💭 <span id="stat-prompt">{{ $session->output_count }}</span> prompts</span>
+            <span>🎬 <span id="stat-output">{{ $outputs->count() }}</span> outputs</span>
         </div>
     </div>
     
     <!-- Workspace Grid -->
     <div class="workspace-grid">
-        <!-- Left Column: Short-Term Memory -->
-        <div class="workspace-panel memory-panel">
+        <!-- Left Column: AI Generator -->
+        <div class="workspace-panel generator-panel">
             <div class="panel-header">
-                <h3>🧠 Short-Term Memory</h3>
+                <h3>🤖 AI Generator</h3>
+                <span class="provider-badge">Mock AI</span>
             </div>
             <div class="panel-body flex-column">
-                <!-- Memory Tabs -->
-                <div class="memory-tabs">
-                    <button class="mem-tab active" data-mem-tab="notes">Notes</button>
-                    <button class="mem-tab" data-mem-tab="drafts">Drafts</button>
-                    <button class="mem-tab" data-mem-tab="refs">Refs</button>
+                <!-- Generation Type Tabs -->
+                <div class="gen-type-tabs">
+                    <button class="gen-tab active" data-type="text">💭 Text</button>
+                    <button class="gen-tab" data-type="image">🎨 Image</button>
                 </div>
                 
-                <!-- Notes Tab -->
-                <div class="mem-tab-content active" id="mem-notes">
-                    <div class="memory-list" id="memory-list">
-                        <div class="empty-state">No notes yet</div>
+                <!-- Prompt Input -->
+                <form id="ai-generate-form" class="ai-form">
+                    @csrf
+                    <input type="hidden" name="session_id" value="{{ $session->id }}">
+                    <input type="hidden" name="type" value="text">
+                    
+                    <div class="prompt-input-area">
+                        <textarea 
+                            name="prompt" 
+                            class="form-input" 
+                            id="prompt-input"
+                            placeholder="Describe what you want AI to generate..."
+                            rows="4"
+                        ></textarea>
                     </div>
-                    <div class="memory-input-area short">
-                        <textarea class="form-input" id="add-memory-input" placeholder="Add note..."></textarea>
-                        <button class="btn btn-primary btn-sm" id="add-memory-btn">Add</button>
+                    
+                    <div class="gen-options">
+                        <select name="model" class="form-select">
+                            <option value="gpt-4">GPT-4</option>
+                            <option value="gpt-3.5">GPT-3.5</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary" id="generate-btn">
+                            ⚡ Generate
+                        </button>
                     </div>
+                </form>
+                
+                <!-- Status Indicator -->
+                <div class="gen-status" id="gen-status" style="display:none">
+                    <div class="status-spinner"></div>
+                    <span>Generating...</span>
                 </div>
                 
-                <!-- Drafts Tab -->
-                <div class="mem-tab-content" id="mem-drafts">
-                    <div class="drafts-list" id="drafts-list">
-                        <div class="empty-state">No drafts yet</div>
+                <!-- Outputs -->
+                <div class="ai-outputs" id="ai-outputs">
+                    @forelse($outputs as $output)
+                    <div class="output-card" data-id="{{ $output->id }}" data-status="{{ $output->status }}">
+                        <div class="output-header">
+                            <span class="output-type">{{ $output->type === 'image' ? '🎨' : '💭' }}</span>
+                            <span class="output-model">{{ $output->model }}</span>
+                            <span class="output-status {{ $output->status }}">{{ $output->status }}</span>
+                        </div>
+                        <div class="output-content">
+                            @if($output->type === 'image')
+                            <img src="{{ $output->result }}" alt="AI Generated">
+                            @else
+                            <p>{{ $output->result }}</p>
+                            @endif
+                        </div>
+                        <div class="output-meta">
+                            <span>{{ $output->created_at->diffForHumans() }}</span>
+                        </div>
                     </div>
-                    <div class="memory-input-area">
-                        <textarea class="form-input" id="add-draft-input" placeholder="Add scene draft..."></textarea>
-                        <button class="btn btn-primary btn-sm" id="add-draft-btn">Add</button>
-                    </div>
+                    @empty
+                    <div class="empty-state" id="no-outputs">No outputs yet. Enter a prompt and click Generate.</div>
+                    @endforelse
                 </div>
+            </div>
+        </div>
                 
                 <!-- References Tab -->
                 <div class="mem-tab-content" id="mem-refs">

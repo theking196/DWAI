@@ -10,7 +10,11 @@
     {{-- Vite Asset Loading --}}
     @vite(['resources/css/app.css'])
 </head>
-<body>
+<body data-session-id="{{ $session->id }}">
+
+<script>
+window.sessionId = {{ $session->id }};
+</script>
     <div class="app-container">
         {{-- Header --}}
         <header class="app-header">
