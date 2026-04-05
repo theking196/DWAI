@@ -215,3 +215,186 @@ class Asset extends Model
         ];
     }
 }
+
+    // ============================================================
+    // Asset Actions
+    // ============================================================
+
+    /**
+     * Preview - get preview data
+     */
+    public function getPreview(): array
+    {
+        $preview = [
+            'id' => $this->id,
+            'title' => $this->title,
+            'description' => $this->description,
+            'url' => $this->url,
+            'thumbnail_url' => $this->type === 'image' ? $this->url : null,
+            'type' => $this->type,
+            'file_name' => $this->file_name,
+            'size_formatted' => $this->size_formatted,
+            'mime_type' => $this->mime_type,
+            'is_primary' => $this->is_primary,
+            'tags' => $this->tags,
+            'links' => [
+                'project_id' => $this->project_id,
+                'session_id' => $this->session_id,
+                'canon_entry_id' => $this->canon_entry_id,
+            ],
+            'created_at' => $this->created_at->toISOString(),
+            'updated_at' => $this->updated_at->toISOString(),
+        ];
+
+        // Add image-specific preview data
+        if ($this->type === 'image' && $this->metadata) {
+            $preview['image_meta'] = $this->metadata;
+        }
+
+        return $preview;
+    }
+
+    /**
+     * Replace file with new one
+     */
+    public function replaceFile($newFile): bool
+    {
+        // Delete old file
+        if ($this->file_path && Storage::disk('public')->exists($this->file_path)) {
+            Storage::disk('public')->delete($this->file_path);
+        }
+
+        // Store new file
+        $path = $newFile->store('assets/' . $this->project_id, 'public');
+        $fileName = basename($path);
+
+        $this->update([
+            'file_path' => $path,
+            'file_name' => $fileName,
+            'original_name' => $newFile->getClientOriginalName(),
+            'mime_type' => $newFile->getMimeType(),
+            'file_size' => $newFile->getSize(),
+            'extension' => $newFile->getClientOriginalExtension(),
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Relink to another entity
+     */
+    public function relink(?int $sessionId = null, ?int $canonEntryId = null): void
+    {
+        $this->update([
+            'session_id' => $sessionId,
+            'canon_entry_id' => $canonEntryId,
+        ]);
+    }
+
+    /**
+     * Relink to another project
+     */
+    public function relinkToProject(int $projectId): bool
+    {
+        $newProject = Project::findOrFail($projectId);
+        
+        if ($newProject->user_id !== $this->user_id) {
+            return false;
+        }
+
+        // Move file to new project folder
+        $newPath = str_replace(
+            'assets/' . $this->project_id,
+            'assets/' . $projectId,
+            $this->file_path
+        );
+
+        if (Storage::disk('public')->exists($this->file_path)) {
+            Storage::disk('public')->move($this->file_path, $newPath);
+        }
+
+        $this->update([
+            'project_id' => $projectId,
+            'file_path' => $newPath,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Mark as style reference
+     */
+    public function markAsStyleReference(): void
+    {
+        // Add style-reference tag
+        $this->addTag('style-reference');
+        
+        // If part of a project, could also update project's style images
+        if ($this->project) {
+            $styleImages = $this->project->style_images ?? [];
+            $styleImages[] = [
+                'asset_id' => $this->id,
+                'path' => $this->file_path,
+                'title' => $this->title,
+                'added_at' => now()->toISOString(),
+            ];
+            $this->project->update(['style_images' => $styleImages]);
+        }
+    }
+
+    /**
+     * Unmark as style reference
+     */
+    public function unmarkAsStyleReference(): void
+    {
+        $tags = $this->tags ?? [];
+        $this->update(['tags' => array_filter($tags, fn($t) => $t !== 'style-reference')]);
+
+        // Remove from project style images
+        if ($this->project && $this->project->style_images) {
+            $styleImages = array_filter($this->project->style_images, fn($img) => ($img['asset_id'] ?? null) !== $this->id);
+            $this->project->update(['style_images' => array_values($styleImages)]);
+        }
+    }
+
+    /**
+     * Check if is style reference
+     */
+    public function isStyleReference(): bool
+    {
+        return in_array('style-reference', $this->tags ?? []);
+    }
+
+    /**
+     * Duplicate to another project
+     */
+    public function duplicateTo(int $projectId): Asset
+    {
+        $newProject = Project::findOrFail($projectId);
+        
+        if ($newProject->user_id !== $this->user_id) {
+            throw new \Exception('Unauthorized');
+        }
+
+        // Copy file
+        $newPath = 'assets/' . $projectId . '/' . $this->file_name;
+        if (Storage::disk('public')->exists($this->file_path)) {
+            Storage::disk('public')->copy($this->file_path, $newPath);
+        }
+
+        return self::create([
+            'user_id' => $this->user_id,
+            'project_id' => $projectId,
+            'file_name' => $this->file_name,
+            'original_name' => $this->original_name,
+            'file_path' => $newPath,
+            'mime_type' => $this->mime_type,
+            'file_size' => $this->file_size,
+            'extension' => $this->extension,
+            'title' => $this->title,
+            'description' => $this->description,
+            'type' => $this->type,
+            'tags' => $this->tags,
+            'metadata' => $this->metadata,
+        ]);
+    }

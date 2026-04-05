@@ -177,3 +177,54 @@ Route::get('/projects/{project}/style', function (int $project) {
     ]);
 })->name('api.projects.style');
 
+
+
+Route::get('/assets/{id}/preview', function (int $id) {
+    $asset = \App\Models\Asset::findOrFail($id);
+    if ($asset->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    return response()->json($asset->getPreview());
+})->name('api.assets.preview');
+
+Route::post('/assets/{id}/replace', function (Illuminate\Http\Request $request, int $id) {
+    $asset = \App\Models\Asset::findOrFail($id);
+    if ($asset->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $request->validate(['file' => 'required|file|max:51200']);
+    $asset->replaceFile($request->file('file'));
+    return response()->json(['asset' => $asset]);
+})->name('api.assets.replace');
+
+Route::post('/assets/{id}/relink', function (Illuminate\Http\Request $request, int $id) {
+    $asset = \App\Models\Asset::findOrFail($id);
+    if ($asset->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $asset->relink($request->session_id, $request->canon_entry_id);
+    return response()->json($asset);
+})->name('api.assets.relink');
+
+Route::post('/assets/{id}/relink-project/{projectId}', function (int $id, int $projectId) {
+    $asset = \App\Models\Asset::findOrFail($id);
+    if ($asset->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $asset->relinkToProject($projectId);
+    return response()->json($asset);
+})->name('api.assets.relink-project');
+
+Route::post('/assets/{id}/style-reference', function (int $id) {
+    $asset = \App\Models\Asset::findOrFail($id);
+    if ($asset->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $asset->markAsStyleReference();
+    return response()->json(['is_style_reference' => true]);
+})->name('api.assets.mark-style');
+
+Route::delete('/assets/{id}/style-reference', function (int $id) {
+    $asset = \App\Models\Asset::findOrFail($id);
+    if ($asset->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $asset->unmarkAsStyleReference();
+    return response()->json(['is_style_reference' => false]);
+})->name('api.assets.unmark-style');
+
+Route::post('/assets/{id}/duplicate/{projectId}', function (int $id, int $projectId) {
+    $asset = \App\Models\Asset::findOrFail($id);
+    if ($asset->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $newAsset = $asset->duplicateTo($projectId);
+    return response()->json($newAsset);
+})->name('api.assets.duplicate');
+
