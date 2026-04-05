@@ -13,90 +13,89 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | DWAI Studio Routes
 |--------------------------------------------------------------------------
-| 
-| All routes require authentication (private access).
-| Unauthenticated users are redirected to login.
 |
-| Optional: Add 'local.only' middleware to restrict to localhost only:
-|
-|   Route::middleware(['auth', 'local.only'])->group(...)
+| ACCESS LEVELS:
+| - guest: No auth required (login page only)
+| - viewer: Anyone logged in can view
+| - editor: Can edit, upload, generate AI
+| - admin: Can delete projects, manage settings
 |
 */
 
 // ============================================================
-// Public Routes (No Auth)
+// GUEST ROUTES (No Auth)
 // ============================================================
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+});
+
+// Logout (auth required)
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+
 // ============================================================
-// Private Routes (Auth Required)
+// VIEWER ROUTES (Any logged-in user)
 // ============================================================
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth'])->group(function () {
     
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
+    Route::get('/', fn() => redirect()->route('dashboard'))->name('home');
     
-    // Projects - View
+    // Projects - View Only
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
-    Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
-    Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
     
-    // Project - Admin Only
-    Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])
-        ->name('projects.destroy')
-        ->middleware('role:admin');
-    
-    // References - Viewer+
+    // References - View Only
     Route::get('/projects/{project}/references', [ReferenceController::class, 'forProject'])
         ->name('projects.references');
     
-    // References - Editor+
-    Route::post('/projects/{project}/references/primary', [ReferenceController::class, 'setPrimary'])
-        ->name('projects.references.primary')
-        ->middleware('role:editor');
-    
-    // Sessions - View
+    // Sessions - View Only
     Route::get('/sessions', [SessionController::class, 'index'])->name('sessions.index');
-    Route::get('/sessions/create', [SessionController::class, 'create'])->name('sessions.create');
-    Route::post('/sessions', [SessionController::class, 'store'])->name('sessions.store');
     Route::get('/sessions/{session}', [SessionController::class, 'show'])->name('sessions.show');
     
-    // Uploads - Editor+ (can upload/edit)
-    Route::post('/upload/project-style', [UploadController::class, 'projectStyle'])
-        ->name('upload.project-style')
-        ->middleware('role:editor');
-    
-    Route::post('/upload/reference', [UploadController::class, 'reference'])
-        ->name('upload.reference')
-        ->middleware('role:editor');
-    
-    Route::delete('/upload/reference/{id}', [UploadController::class, 'deleteReference'])
-        ->name('upload.reference.delete')
-        ->middleware('role:editor');
-    
-    // AI Generation - Editor+ (can generate)
-    Route::post('/ai/generate/text', [AIController::class, 'generateText'])
-        ->name('ai.generate.text')
-        ->middleware('role:editor');
-    
-    Route::post('/ai/generate/image', [AIController::class, 'generateImage'])
-        ->name('ai.generate.image')
-        ->middleware('role:editor');
-    
-    Route::get('/ai/outputs/{session}', [AIController::class, 'outputs'])
-        ->name('ai.outputs');
-    
-    Route::get('/ai/outputs/{session}/status/{output}', [AIController::class, 'status'])
-        ->name('ai.status');
+    // AI Outputs - View Only
+    Route::get('/ai/outputs/{session}', [AIController::class, 'outputs'])->name('ai.outputs');
+    Route::get('/ai/outputs/{session}/status/{output}', [AIController::class, 'status'])->name('ai.status');
 });
 
+
 // ============================================================
-// Home Redirect
+// EDITOR ROUTES (editor + admin)
 // ============================================================
-Route::get('/', fn() => auth()->check() 
-    ? redirect()->route('dashboard') 
-    : redirect()->route('login')
-)->name('home');
+Route::middleware(['auth', 'role:editor'])->group(function () {
+    
+    // Projects - Create
+    Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
+    Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
+    
+    // References - Manage
+    Route::post('/projects/{project}/references/primary', [ReferenceController::class, 'setPrimary'])
+        ->name('projects.references.primary');
+    
+    // Sessions - Create
+    Route::get('/sessions/create', [SessionController::class, 'create'])->name('sessions.create');
+    Route::post('/sessions', [SessionController::class, 'store'])->name('sessions.store');
+    
+    // Uploads
+    Route::post('/upload/project-style', [UploadController::class, 'projectStyle'])->name('upload.project-style');
+    Route::post('/upload/reference', [UploadController::class, 'reference'])->name('upload.reference');
+    Route::delete('/upload/reference/{id}', [UploadController::class, 'deleteReference'])->name('upload.reference.delete');
+    
+    // AI Generation
+    Route::post('/ai/generate/text', [AIController::class, 'generateText'])->name('ai.generate.text');
+    Route::post('/ai/generate/image', [AIController::class, 'generateImage'])->name('ai.generate.image');
+});
+
+
+// ============================================================
+// ADMIN ROUTES (admin only)
+// ============================================================
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    
+    // Project Management
+    Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
+    
+    // Future: Settings, User management, etc.
+});
