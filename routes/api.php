@@ -669,3 +669,40 @@ Route::get('/conflicts/{project}/summary', function (int $project) {
     return response()->json($service->getSummary($project));
 })->name('api.conflicts.summary');
 
+
+
+# Conflict management
+Route::get('/projects/{project}/conflicts', function (int $project) {
+    return response()->json(\App\Models\Conflict::forProject($project));
+})->name('api.conflicts.index');
+
+Route::get('/projects/{project}/conflicts/active', function (int $project) {
+    return response()->json(\App\Models\Conflict::active($project));
+})->name('api.conflicts.active');
+
+Route::post('/conflicts/{id}/acknowledge', function (int $id) {
+    $conflict = \App\Models\Conflict::findOrFail($id);
+    if ($conflict->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $conflict->acknowledge();
+    return response()->json(['status' => 'acknowledged']);
+})->name('api.conflicts.acknowledge');
+
+Route::post('/conflicts/{id}/resolve', function (Illuminate\Http\Request $request, int $id) {
+    $conflict = \App\Models\Conflict::findOrFail($id);
+    if ($conflict->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $conflict->resolve($request->fix);
+    return response()->json(['status' => 'resolved']);
+})->name('api.conflicts.resolve');
+
+Route::post('/conflicts/{id}/ignore', function (int $id) {
+    $conflict = \App\Models\Conflict::findOrFail($id);
+    if ($conflict->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $conflict->ignore();
+    return response()->json(['status' => 'ignored']);
+})->name('api.conflicts.ignore');
+
+Route::post('/projects/{project}/conflicts/sync', function (int $project) {
+    $count = \App\Models\Conflict::syncFromDetection($project);
+    return response()->json(['synced' => $count]);
+})->name('api.conflicts.sync');
+
