@@ -43,3 +43,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/sessions/{session}/references', [ApiSessionController::class, 'addReference'])
         ->name('api.sessions.references.add');
 });
+
+
+// Session Search
+Route::get('/sessions/search', function (Illuminate\Http\Request $request) {
+    $query = $request->get('q', '');
+    $sessions = \App\Models\Session::search($query)->with('project')->paginate(20);
+    return $sessions;
+})->name('api.sessions.search');
+
