@@ -112,3 +112,17 @@ Route::post('/references/{id}/primary', [ReferenceImageController::class, 'setPr
 Route::delete('/references/{id}', [ReferenceImageController::class, 'destroy'])->name('api.references.destroy');
 Route::get('/references/project/{project}/count', [ReferenceImageController::class, 'countByProject'])->name('api.references.count');
 
+
+
+use App\Http\Controllers\Api\AssetController;
+
+Route::get('/assets', [AssetController::class, 'index'])->name('api.assets.index');
+Route::post('/assets', [AssetController::class, 'store'])->name('api.assets.store');
+Route::get('/assets/{id}', [AssetController::class, 'show'])->name('api.assets.show');
+Route::put('/assets/{id}', [AssetController::class, 'update'])->name('api.assets.update');
+Route::delete('/assets/{id}', [AssetController::class, 'destroy'])->name('api.assets.destroy');
+Route::get('/assets/{project}/organized', [AssetController::class, 'organized'])->name('api.assets.organized');
+Route::get('/assets/{project}/stats', [AssetController::class, 'stats'])->name('api.assets.stats');
+Route::post('/assets/{id}/tag', [AssetController::class, 'addTag'])->name('api.assets.add-tag');
+Route::get('/assets/{project}/tags', [AssetController::class, 'projectTags'])->name('api.assets.project-tags');
+
