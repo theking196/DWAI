@@ -10,7 +10,7 @@ use App\Observers\ReferenceImageObserver;
 use App\Observers\SessionObserver;
 use Illuminate\Support\ServiceProvider;
 
-class AppServiceProvider extends ServiceProvider
+class EmbeddingServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
@@ -19,9 +19,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        parent::boot();
-        
-        // Register embedding observers - auto-update vectors on changes
         CanonEntry::observe(CanonObserver::class);
         ReferenceImage::observe(ReferenceImageObserver::class);
         Session::observe(SessionObserver::class);
