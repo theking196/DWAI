@@ -6,8 +6,6 @@ use App\Models\Project;
 use App\Models\Session;
 use App\Models\CanonEntry;
 use App\Models\ReferenceImage;
-use App\Models\TimelineEvent;
-use App\Models\Conflict;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -15,15 +13,28 @@ use Illuminate\Http\RedirectResponse;
 class ProjectController extends WebController
 {
     /**
-     * Display all projects.
+     * Display all projects (excludes archived by default).
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        $projects = auth()->user()
-            ->projects()
-            ->withCount(['sessions', 'canonEntries', 'referenceImages'])
-            ->orderBy('updated_at', 'desc')
-            ->get();
+        $query = auth()->user()->projects()->withCount(['sessions', 'canonEntries', 'referenceImages']);
+
+        // Filter by status
+        if ($request->has('status') && $request->status) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by type
+        if ($request->has('type') && $request->type) {
+            $query->where('type', $request->type);
+        }
+
+        // Show archived?
+        if ($request->get('include_archived', false)) {
+            $projects = $query->orderBy('updated_at', 'desc')->get();
+        } else {
+            $projects = $query->where('is_archived', false)->orderBy('updated_at', 'desc')->get();
+        }
 
         return $this->view('projects.index', compact('projects'));
     }
@@ -33,7 +44,8 @@ class ProjectController extends WebController
      */
     public function create(): View
     {
-        return $this->view('projects.create');
+        $types = ['Film', 'Comic', 'Music Video', 'TV Series', 'Short Film', 'Web Series'];
+        return $this->view('projects.create', compact('types'));
     }
 
     /**
@@ -49,8 +61,13 @@ class ProjectController extends WebController
 
         $project = auth()->user()->projects()->create($validated);
 
+        // Add tags if provided
+        if ($request->has('tags')) {
+            $project->update(['tags' => $request->tags]);
+        }
+
         return redirect()->route('projects.show', $project->id)
-            ->with('success', 'Project created successfully!');
+            ->with('success', 'Project created!');
     }
 
     /**
@@ -66,20 +83,9 @@ class ProjectController extends WebController
             'conflicts' => fn($q) => $q->unresolved(),
         ])->findOrFail($id);
 
-        // Check ownership
-        if ($project->user_id !== auth()->id()) {
-            abort(403, 'Unauthorized access to this project.');
-        }
+        $this->authorizeProject($project);
 
-        $sessions = $project->sessions;
-        $canon = $project->canonEntries;
-        $references = $project->referenceImages;
-        $timeline = $project->timelineEvents;
-        $conflicts = $project->conflicts;
-
-        return $this->view('projects.show', compact(
-            'project', 'sessions', 'canon', 'references', 'timeline', 'conflicts'
-        ));
+        return $this->view('projects.show', compact('project'));
     }
 
     /**
@@ -88,12 +94,12 @@ class ProjectController extends WebController
     public function edit(int $id): View
     {
         $project = Project::findOrFail($id);
+        $this->authorizeProject($project);
 
-        if ($project->user_id !== auth()->id()) {
-            abort(403);
-        }
+        $types = ['Film', 'Comic', 'Music Video', 'TV Series', 'Short Film', 'Web Series'];
+        $statuses = ['draft', 'active', 'completed', 'archived'];
 
-        return $this->view('projects.edit', compact('project'));
+        return $this->view('projects.edit', compact('project', 'types', 'statuses'));
     }
 
     /**
@@ -102,10 +108,7 @@ class ProjectController extends WebController
     public function update(Request $request, int $id): RedirectResponse
     {
         $project = Project::findOrFail($id);
-
-        if ($project->user_id !== auth()->id()) {
-            abort(403);
-        }
+        $this->authorizeProject($project);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -113,6 +116,8 @@ class ProjectController extends WebController
             'type' => 'required|string|max:50',
             'status' => 'nullable|string|in:draft,active,completed,archived',
             'progress' => 'nullable|integer|min:0|max:100',
+            'visual_style_description' => 'nullable|string',
+            'tags' => 'nullable|array',
         ]);
 
         $project->update($validated);
@@ -127,15 +132,26 @@ class ProjectController extends WebController
     public function archive(int $id): RedirectResponse
     {
         $project = Project::findOrFail($id);
+        $this->authorizeProject($project);
 
-        if ($project->user_id !== auth()->id()) {
-            abort(403);
-        }
-
-        $project->update(['status' => 'archived']);
+        $project->archive();
 
         return redirect()->route('projects.index')
             ->with('success', 'Project archived.');
+    }
+
+    /**
+     * Unarchive project.
+     */
+    public function unarchive(int $id): RedirectResponse
+    {
+        $project = Project::findOrFail($id);
+        $this->authorizeProject($project);
+
+        $project->unarchive();
+
+        return redirect()->route('projects.show', $project->id)
+            ->with('success', 'Project restored.');
     }
 
     /**
@@ -145,7 +161,7 @@ class ProjectController extends WebController
     {
         $project = Project::findOrFail($id);
 
-        // Only admin or owner can delete
+        // Admin or owner only
         if ($project->user_id !== auth()->id() && !auth()->user()->isAdmin()) {
             abort(403);
         }
@@ -154,5 +170,15 @@ class ProjectController extends WebController
 
         return redirect()->route('projects.index')
             ->with('success', 'Project deleted.');
+    }
+
+    /**
+     * Helper: Authorize project access.
+     */
+    protected function authorizeProject(Project $project): void
+    {
+        if ($project->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized access to this project.');
+        }
     }
 }
