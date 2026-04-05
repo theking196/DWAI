@@ -1,26 +1,53 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SessionController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
+|
+| DWAI Studio Routes
+|
 */
 
+// Home - redirect to dashboard
 Route::get('/', function () {
     return redirect()->route('dashboard');
 })->name('home');
 
-Route::get('/dashboard', function () {
-    return view('pages.dashboard');
-})->name('dashboard');
+// Dashboard
+Route::get('/dashboard', [DashboardController::class, 'show'])
+    ->name('dashboard');
 
-Route::resource('projects', ProjectController::class);
-Route::resource('sessions', SessionController::class);
+// Projects
+Route::get('/projects', [ProjectController::class, 'index'])
+    ->name('projects.index');
 
-// Legacy route aliases
-Route::get('/project/{id}', [ProjectController::class, 'show'])->name('projects.show');
-Route::get('/session/{id}', [SessionController::class, 'show'])->name('sessions.show');
+Route::get('/projects/create', [ProjectController::class, 'create'])
+    ->name('projects.create');
+
+Route::post('/projects', [ProjectController::class, 'store'])
+    ->name('projects.store');
+
+Route::get('/projects/{project}', [ProjectController::class, 'show'])
+    ->name('projects.show');
+
+Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])
+    ->name('projects.destroy');
+
+// Sessions
+Route::get('/sessions', [SessionController::class, 'index'])
+    ->name('sessions.index');
+
+Route::get('/sessions/create', [SessionController::class, 'create'])
+    ->name('sessions.create');
+
+Route::post('/sessions', [SessionController::class, 'store'])
+    ->name('sessions.store');
+
+Route::get('/sessions/{session}', [SessionController::class, 'show'])
+    ->name('sessions.show');

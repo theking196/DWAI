@@ -7,60 +7,45 @@ use Illuminate\Http\Request;
 class ProjectController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of projects.
      */
     public function index()
     {
-        // Load projects from localStorage (demo) or database
-        return view('pages.projects');
+        return view('projects.index');
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Display a specific project.
+     */
+    public function show($id)
+    {
+        // Pass project ID to view
+        return view('projects.show', ['projectId' => $id]);
+    }
+
+    /**
+     * Show the form for creating a new project.
      */
     public function create()
     {
-        return view('pages.projects.create');
+        return view('projects.create');
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Store a newly created project.
      */
     public function store(Request $request)
     {
-        // Validate and save
+        // Handle project creation
         return redirect()->route('projects.index');
     }
 
     /**
-     * Display the specified resource.
+     * Remove the specified project.
      */
-    public function show(string $id)
+    public function destroy($id)
     {
-        return view('pages.project-workspace', ['id' => $id]);
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        return view('pages.projects.edit', ['id' => $id]);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        return redirect()->route('projects.show', $id);
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
+        // Handle project deletion
         return redirect()->route('projects.index');
     }
 }
