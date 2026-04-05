@@ -1,27 +1,34 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
+import { resolve } from 'path';
 
 export default defineConfig({
     plugins: [
-        laravel([
-            'resources/views/pages/*.blade.php',
-            'resources/views/layouts/*.blade.php',
-        ]),
+        laravel({
+            input: [
+                'resources/css/app.css',
+                'resources/js/app.js',
+            ],
+            refresh: true,
+        }),
     ],
     resolve: {
         alias: {
-            '@': '/resources/js',
+            '@': resolve(__dirname, 'resources/js'),
         },
-    },
-    css: {
-        devSourcemap: true,
-        minimize: true,
     },
     build: {
         rollupOptions: {
             output: {
-                manualInline: ['twig'],
+                manualChunks: {
+                    'alpine': ['alpinejs'],
+                },
             },
         },
+    },
+    server: {
+        host: 'localhost',
+        port: 5173,
+        strictPort: true,
     },
 });

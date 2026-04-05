@@ -1,0 +1,13 @@
+
+# Local storage (private)
+/storage/app/public/
+/storage/framework/cache/
+/storage/framework/sessions/
+/storage/framework/views/
+/storage/logs/
+*.log
+
+# Local database
+/database/database.sqlite
+/database/*.sqlite
+/database/*.sqlite3
