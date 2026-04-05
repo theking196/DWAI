@@ -657,3 +657,15 @@ Route::get('/projects/{project}/timeline/compact', function (int $project) {
     ]);
 })->name('api.timeline.compact');
 
+
+
+Route::get('/conflicts/{project}', function (int $project) {
+    $service = app(\App\Services\AI\ConflictDetectionService::class);
+    return response()->json($service->detectAllConflicts($project));
+})->name('api.conflicts.detect');
+
+Route::get('/conflicts/{project}/summary', function (int $project) {
+    $service = app(\App\Services\AI\ConflictDetectionService::class);
+    return response()->json($service->getSummary($project));
+})->name('api.conflicts.summary');
+
