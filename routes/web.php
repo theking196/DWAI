@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SessionController;
+use App\Http\Controllers\UploadController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -51,3 +52,16 @@ Route::post('/sessions', [SessionController::class, 'store'])
 
 Route::get('/sessions/{session}', [SessionController::class, 'show'])
     ->name('sessions.show');
+
+// Uploads
+Route::post('/upload/project-style', [UploadController::class, 'projectStyle'])
+    ->name('upload.project-style');
+
+Route::post('/upload/reference', [UploadController::class, 'reference'])
+    ->name('upload.reference');
+
+Route::delete('/upload/reference/{id}', [UploadController::class, 'deleteReference'])
+    ->name('upload.reference.delete');
+
+Route::post('/upload/session-output', [UploadController::class, 'sessionOutput'])
+    ->name('upload.session-output');
