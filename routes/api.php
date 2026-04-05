@@ -396,3 +396,32 @@ Route::get('/canon/{id}/history', function (int $id) {
     return response()->json(['history' => $entry->getMergeHistory()]);
 })->name('api.canon.history');
 
+
+
+Route::get('/canon/{id}/versions', function (int $id) {
+    $entry = \App\Models\CanonEntry::findOrFail($id);
+    if ($entry->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    return response()->json(['versions' => $entry->getVersionHistory()]);
+})->name('api.canon.versions');
+
+Route::post('/canon/{id}/versions', function (Illuminate\Http\Request $request, int $id) {
+    $entry = \App\Models\CanonEntry::findOrFail($id);
+    if ($entry->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $result = $entry->updateWithVersion($request->all(), $request->summary);
+    return response()->json($result);
+})->name('api.canon.version-update');
+
+Route::get('/canon/{id}/versions/{version}/diff', function (int $id, int $version) {
+    $entry = \App\Models\CanonEntry::findOrFail($id);
+    if ($entry->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $diff = $entry->diffFromVersion($version);
+    return response()->json($diff);
+})->name('api.canon.version-diff');
+
+Route::post('/canon/{id}/versions/{version}/restore', function (int $id, int $version) {
+    $entry = \App\Models\CanonEntry::findOrFail($id);
+    if ($entry->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $restored = $entry->restoreToVersion($version);
+    return response()->json(['restored' => $restored ? true : false]);
+})->name('api.canon.version-restore');
+

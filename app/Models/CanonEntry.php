@@ -379,3 +379,101 @@ class CanonEntry extends Model
 
         return $conflicts;
     }
+
+    // ============================================================
+    // Version History
+    // ============================================================
+
+    /**
+     * Create a version snapshot before making changes.
+     */
+    public function createVersion(?string $summary = null, ?array $changes = null): CanonVersion
+    {
+        return CanonVersion::create([
+            'canon_entry_id' => $this->id,
+            'user_id' => auth()->id() ?? $this->user_id,
+            'title' => $this->title,
+            'content' => $this->content,
+            'type' => $this->type,
+            'image' => $this->image,
+            'tags' => $this->tags,
+            'importance' => $this->importance,
+            'change_summary' => $summary,
+            'changes' => $changes,
+            'created_at' => now(),
+        ]);
+    }
+
+    /**
+     * Update with automatic version creation.
+     */
+    public function updateWithVersion(array $data, ?string $summary = null): array
+    {
+        // Create version of current state first
+        $this->createVersion($summary, $data);
+
+        // Now update
+        $this->update($data);
+
+        return ['updated' => true, 'version_created' => true];
+    }
+
+    /**
+     * Get version history.
+     */
+    public function getVersionHistory(int $limit = 20): array
+    {
+        return CanonVersion::where('canon_entry_id', $this->id)
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(fn($v) => $v->getSummary())
+            ->toArray();
+    }
+
+    /**
+     * Restore to a specific version.
+     */
+    public function restoreToVersion(int $versionId): ?CanonEntry
+    {
+        $version = CanonVersion::find($versionId);
+        
+        if (!$version || $version->canon_entry_id !== $this->id) {
+            return null;
+        }
+
+        // Create version of current state before restoring
+        $this->createVersion('Before restore to v' . $versionId);
+
+        // Restore
+        $this->update([
+            'title' => $version->title,
+            'content' => $version->content,
+            'type' => $version->type,
+            'image' => $version->image,
+            'tags' => $version->tags,
+            'importance' => $version->importance,
+        ]);
+
+        return $this->fresh();
+    }
+
+    /**
+     * Compare current state with a version.
+     */
+    public function diffFromVersion(int $versionId): ?array
+    {
+        $version = CanonVersion::find($versionId);
+        
+        if (!$version || $version->canon_entry_id !== $this->id) {
+            return null;
+        }
+
+        return [
+            'title' => ['old' => $version->title, 'new' => $this->title],
+            'content' => ['old' => $version->content, 'new' => $this->content],
+            'type' => ['old' => $version->type, 'new' => $this->type],
+            'importance' => ['old' => $version->importance, 'new' => $this->importance],
+            'tags' => ['old' => $version->tags, 'new' => $this->tags],
+        ];
+    }
