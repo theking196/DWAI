@@ -52,3 +52,12 @@ Route::get('/sessions/search', function (Illuminate\Http\Request $request) {
     return $sessions;
 })->name('api.sessions.search');
 
+
+
+use App\Http\Controllers\Api\CanonController;
+
+Route::get('/canon/{project}/organized', [CanonController::class, 'organized'])->name('api.canon.organized');
+Route::get('/canon/{project}/type/{type}', [CanonController::class, 'byType'])->name('api.canon.byType');
+Route::get('/canon/{project}/importance/{level}', [CanonController::class, 'byImportance'])->name('api.canon.byImportance');
+Route::get('/canon/search', [CanonController::class, 'search'])->name('api.canon.search');
+
