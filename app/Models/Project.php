@@ -353,3 +353,35 @@ class Project extends Model
         
         return $images;
     }
+
+    // ============================================================
+    // Visual Style Helpers
+    // ============================================================
+
+    /**
+     * Get style description.
+     */
+    public function getVisualStyleDescription(): string
+    {
+        return $this->visual_style_description ?? '';
+    }
+
+    /**
+     * Check if project has visual style.
+     */
+    public function hasVisualStyle(): bool
+    {
+        return !empty($this->visual_style_image) || !empty($this->visual_style_description);
+    }
+
+    /**
+     * Get style summary for AI context.
+     */
+    public function getStyleSummary(): array
+    {
+        return [
+            'image_url' => $this->getVisualStyleUrl(),
+            'description' => $this->getVisualStyleDescription(),
+            'additional_images' => $this->getStyleImageUrls(),
+        ];
+    }
