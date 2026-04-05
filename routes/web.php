@@ -9,14 +9,14 @@ use App\Http\Controllers\Web\SessionController;
 use App\Http\Controllers\Web\UploadController;
 use Illuminate\Support\Facades\Route;
 
-// GUEST ROUTES
+// GUEST
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
 });
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// VIEWER ROUTES
+// VIEWER
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
     Route::get('/', fn() => redirect()->route('dashboard'))->name('home');
@@ -24,6 +24,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
     Route::get('/projects/{project}/references', [ReferenceController::class, 'forProject'])->name('projects.references');
+    Route::get('/projects/{project}/confirm-delete', [ProjectController::class, 'confirmDelete'])->name('projects.confirm-delete');
     
     Route::get('/sessions', [SessionController::class, 'index'])->name('sessions.index');
     Route::get('/sessions/{session}', [SessionController::class, 'show'])->name('sessions.show');
@@ -32,7 +33,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/ai/outputs/{session}/status/{output}', [AIController::class, 'status'])->name('ai.status');
 });
 
-// EDITOR ROUTES
+// EDITOR
 Route::middleware(['auth', 'role:editor'])->group(function () {
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
@@ -55,7 +56,7 @@ Route::middleware(['auth', 'role:editor'])->group(function () {
     Route::post('/ai/generate/image', [AIController::class, 'generateImage'])->name('ai.generate.image');
 });
 
-// ADMIN ROUTES
+// ADMIN
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
 });

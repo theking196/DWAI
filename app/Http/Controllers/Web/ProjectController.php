@@ -3,9 +3,6 @@
 namespace App\Http\Controllers\Web;
 
 use App\Models\Project;
-use App\Models\Session;
-use App\Models\CanonEntry;
-use App\Models\ReferenceImage;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -13,28 +10,25 @@ use Illuminate\Http\RedirectResponse;
 class ProjectController extends WebController
 {
     /**
-     * Display all projects (excludes archived by default).
+     * Display all projects.
      */
     public function index(Request $request): View
     {
-        $query = auth()->user()->projects()->withCount(['sessions', 'canonEntries', 'referenceImages']);
+        $query = auth()->user()->projects()
+            ->withCount(['sessions', 'canonEntries', 'referenceImages']);
 
-        // Filter by status
-        if ($request->has('status') && $request->status) {
-            $query->where('status', $request->status);
+        // Filter options
+        if ($request->status === 'archived') {
+            $query->where('is_archived', true);
+        } elseif ($request->status !== 'all') {
+            $query->where('is_archived', false);
         }
 
-        // Filter by type
-        if ($request->has('type') && $request->type) {
+        if ($request->type) {
             $query->where('type', $request->type);
         }
 
-        // Show archived?
-        if ($request->get('include_archived', false)) {
-            $projects = $query->orderBy('updated_at', 'desc')->get();
-        } else {
-            $projects = $query->where('is_archived', false)->orderBy('updated_at', 'desc')->get();
-        }
+        $projects = $query->orderBy('updated_at', 'desc')->get();
 
         return $this->view('projects.index', compact('projects'));
     }
@@ -60,11 +54,6 @@ class ProjectController extends WebController
         ]);
 
         $project = auth()->user()->projects()->create($validated);
-
-        // Add tags if provided
-        if ($request->has('tags')) {
-            $project->update(['tags' => $request->tags]);
-        }
 
         return redirect()->route('projects.show', $project->id)
             ->with('success', 'Project created!');
@@ -97,7 +86,7 @@ class ProjectController extends WebController
         $this->authorizeProject($project);
 
         $types = ['Film', 'Comic', 'Music Video', 'TV Series', 'Short Film', 'Web Series'];
-        $statuses = ['draft', 'active', 'completed', 'archived'];
+        $statuses = ['draft', 'active', 'completed'];
 
         return $this->view('projects.edit', compact('project', 'types', 'statuses'));
     }
@@ -114,10 +103,9 @@ class ProjectController extends WebController
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'type' => 'required|string|max:50',
-            'status' => 'nullable|string|in:draft,active,completed,archived',
+            'status' => 'nullable|string|in:draft,active,completed',
             'progress' => 'nullable|integer|min:0|max:100',
             'visual_style_description' => 'nullable|string',
-            'tags' => 'nullable|array',
         ]);
 
         $project->update($validated);
@@ -127,17 +115,21 @@ class ProjectController extends WebController
     }
 
     /**
-     * Archive project.
+     * Archive project (soft archive, reversible).
      */
     public function archive(int $id): RedirectResponse
     {
         $project = Project::findOrFail($id);
         $this->authorizeProject($project);
 
+        if ($project->is_archived) {
+            return back()->with('info', 'Project is already archived.');
+        }
+
         $project->archive();
 
         return redirect()->route('projects.index')
-            ->with('success', 'Project archived.');
+            ->with('success', 'Project archived. You can restore it later.');
     }
 
     /**
@@ -148,28 +140,49 @@ class ProjectController extends WebController
         $project = Project::findOrFail($id);
         $this->authorizeProject($project);
 
+        if (!$project->is_archived) {
+            return back()->with('info', 'Project is not archived.');
+        }
+
         $project->unarchive();
 
         return redirect()->route('projects.show', $project->id)
-            ->with('success', 'Project restored.');
+            ->with('success', 'Project restored!');
     }
 
     /**
-     * Delete project (admin only).
+     * Show delete confirmation.
      */
-    public function destroy(int $id): RedirectResponse
+    public function confirmDelete(int $id): View
     {
         $project = Project::findOrFail($id);
+        $this->authorizeProject($project);
 
-        // Admin or owner only
-        if ($project->user_id !== auth()->id() && !auth()->user()->isAdmin()) {
-            abort(403);
-        }
+        // Get counts for warning
+        $counts = $project->getCounts();
 
+        return $this->view('projects.confirm-delete', compact('project', 'counts'));
+    }
+
+    /**
+     * Delete project (with confirmation).
+     */
+    public function destroy(Request $request, int $id): RedirectResponse
+    {
+        $project = Project::findOrFail($id);
+        $this->authorizeProject($project);
+
+        // Require explicit confirmation
+        $request->validate([
+            'confirm_delete' => 'required|accepted',
+            'project_name' => 'required|string|in:' . $project->name,
+        ]);
+
+        $projectName = $project->name;
         $project->delete();
 
         return redirect()->route('projects.index')
-            ->with('success', 'Project deleted.');
+            ->with('success', "Project '{$projectName}' permanently deleted.");
     }
 
     /**
