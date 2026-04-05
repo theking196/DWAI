@@ -2,15 +2,37 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Project;
+use App\Models\Session;
+use App\Models\CanonEntry;
+use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
     /**
-     * Show the dashboard.
+     * Show the dashboard with latest data.
      */
-    public function show()
+    public function show(): View
     {
-        return view('pages.dashboard');
+        $stats = [
+            'projects' => Project::count(),
+            'sessions' => Session::count(),
+            'canon' => CanonEntry::count(),
+        ];
+        
+        $recentProjects = Project::orderBy('updated_at', 'desc')
+            ->limit(6)
+            ->get();
+        
+        $recentSessions = Session::with('project')
+            ->orderBy('updated_at', 'desc')
+            ->limit(5)
+            ->get();
+        
+        return view('pages.dashboard', compact(
+            'stats',
+            'recentProjects', 
+            'recentSessions'
+        ));
     }
 }
