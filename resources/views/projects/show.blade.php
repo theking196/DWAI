@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Project: Boy Wonder - DWAI Studio')
+@section('title', 'Project: ' . ($project->name ?? 'Project') . ' - DWAI Studio')
 
 @section('breadcrumb')
     <a href="{{ route('projects.index') }}">Projects</a>
     <span class="separator">/</span>
-    <span class="breadcrumb-item">Boy Wonder</span>
+    <span class="breadcrumb-item">{{ $project->name ?? 'Project' }}</span>
 @endsection
 
 @section('content')
@@ -13,12 +13,12 @@
     <!-- Project Header -->
     <div class="workspace-header">
         <div class="workspace-title">
-            <h1 id="project-title">Boy Wonder</h1>
-            <span class="project-type-badge" id="project-type">Comic</span>
+            <h1 id="project-title">{{ $project->name }}</h1>
+            <span class="project-type-badge" id="project-type">{{ $project->type }}</span>
         </div>
         <div class="workspace-actions">
             <button class="btn btn-secondary" id="settings-btn">⚙️ Settings</button>
-            <button class="btn btn-primary" id="new-session-btn">+ New Session</button>
+            <a href="{{ route('sessions.create') }}?project={{ $project->id }}" class="btn btn-primary" id="new-session-btn">+ New Session</a>
         </div>
     </div>
     
@@ -31,23 +31,27 @@
             </div>
             <div class="panel-body">
                 <div class="session-list">
-                    <div class="session-item active" data-id="1800001">
-                        <div class="session-icon">💭</div>
+                    @forelse($sessions as $session)
+                    <div class="session-item {{ $loop->first ? 'active' : '' }}" data-id="{{ $session->id }}">
+                        <div class="session-icon">
+                            @switch($session->type)
+                                @case('brainstorm')💭@break
+                                @case('script')📝@break
+                                @case('storyboard')🎬@break
+                                @default💭
+                            @endswitch
+                        </div>
                         <div class="session-info">
-                            <h4>Origin Story</h4>
-                            <p class="muted">brainstorm • 5 outputs</p>
+                            <h4>{{ $session->name }}</h4>
+                            <p class="muted">{{ $session->type }} • {{ $session->output_count }} outputs</p>
                         </div>
                     </div>
-                    <div class="session-item" data-id="1800002">
-                        <div class="session-icon">📝</div>
-                        <div class="session-info">
-                            <h4>First Battle</h4>
-                            <p class="muted">script • 4 outputs</p>
-                        </div>
-                    </div>
-                    <div class="session-item" data-id="1800003">
-                        <div class="session-icon">🎬</div>
-                        <div class="session-info">
+                    @empty
+                    <div class="empty-state">No sessions yet</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
                             <h4>Team Formation</h4>
                             <p class="muted">storyboard • 3 outputs</p>
                         </div>
