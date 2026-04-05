@@ -826,3 +826,18 @@ Route::get('/outputs/{id}/download', function (Illuminate\Http\Request $request,
     return response()->download(storage_path('app/' . $path))->deleteFileAfterSend(false);
 })->name('api.outputs.download');
 
+
+
+Route::get('/search', function (Illuminate\Http\Request $request) {
+    $query = $request->get('q', '');
+    if (strlen($query) < 2) return response()->json(['error' => 'Query too short'], 400);
+    
+    $service = app(\App\Services\GlobalSearchService::class);
+    $results = $service->search($query, auth()->id(), [
+        'limit' => $request->get('limit', 20),
+        'types' => $request->get('types') ? explode(',', $request->types) : null,
+    ]);
+    
+    return response()->json($results);
+})->name('api.search');
+
