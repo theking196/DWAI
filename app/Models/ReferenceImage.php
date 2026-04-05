@@ -16,17 +16,32 @@ class ReferenceImage extends Model
         'description',
         'path',
         'type',
-        'is_primary',
         'size',
         'mime_type',
+        'is_primary',
     ];
 
     protected $casts = [
         'size' => 'integer',
+        'is_primary' => 'boolean',
     ];
 
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function markAsPrimary()
+    {
+        // Remove primary from others
+        $this->project->referenceImages()->update(['is_primary' => false]);
+        
+        // Set this as primary
+        $this->update(['is_primary' => true]);
+    }
+
+    public function getUrlAttribute()
+    {
+        return asset('storage/' . $this->path);
     }
 }

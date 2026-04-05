@@ -30,29 +30,37 @@ class AIOutput extends Model
         return $this->belongsTo(Session::class);
     }
 
-    public function markAsPending(): void
+    public function markAsPending(): self
     {
         $this->update(['status' => 'pending']);
+        return $this;
     }
 
-    public function markAsProcessing(): void
+    public function markAsProcessing(): self
     {
         $this->update(['status' => 'processing']);
+        return $this;
     }
 
-    public function markAsCompleted(string $result): void
+    public function markAsCompleted(string $result): self
     {
-        $this->update([
-            'status' => 'completed',
-            'result' => $result,
-        ]);
+        $this->update(['status' => 'completed', 'result' => $result]);
+        return $this;
     }
 
-    public function markAsFailed(string $error): void
+    public function markAsFailed(string $error): self
     {
-        $this->update([
-            'status' => 'failed',
-            'error_message' => $error,
-        ]);
+        $this->update(['status' => 'failed', 'error_message' => $error]);
+        return $this;
+    }
+
+    public function isText(): bool
+    {
+        return $this->type === 'text';
+    }
+
+    public function isImage(): bool
+    {
+        return $this->type === 'image';
     }
 }

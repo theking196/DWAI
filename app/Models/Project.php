@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Project extends Model
 {
@@ -37,5 +38,30 @@ class Project extends Model
     public function referenceImages(): HasMany
     {
         return $this->hasMany(ReferenceImage::class);
+    }
+
+    public function timelineEvents(): HasMany
+    {
+        return $this->hasMany(TimelineEvent::class);
+    }
+
+    public function conflicts(): HasMany
+    {
+        return $this->hasMany(Conflict::class);
+    }
+
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class);
+    }
+
+    public function getPrimaryReference(): ?ReferenceImage
+    {
+        return $this->referenceImages()->where('is_primary', true)->first();
+    }
+
+    public function getUnresolvedConflicts()
+    {
+        return $this->conflicts()->unresolved()->get();
     }
 }

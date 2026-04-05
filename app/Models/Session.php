@@ -33,4 +33,19 @@ class Session extends Model
     {
         return $this->hasMany(AIOutput::class);
     }
+
+    public function timelineEvents(): HasMany
+    {
+        return $this->hasMany(TimelineEvent::class);
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this->status === 'completed';
+    }
 }

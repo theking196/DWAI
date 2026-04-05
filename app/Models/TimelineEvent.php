@@ -6,21 +6,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class CanonEntry extends Model
+class TimelineEvent extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'project_id',
+        'session_id',
         'title',
+        'description',
         'type',
-        'content',
-        'image',
-        'tags',
+        'event_date',
+        'order_index',
     ];
 
     protected $casts = [
-        'tags' => 'array',
+        'event_date' => 'date',
+        'order_index' => 'integer',
     ];
 
     public function project(): BelongsTo
@@ -28,14 +30,9 @@ class CanonEntry extends Model
         return $this->belongsTo(Project::class);
     }
 
-    public function scopeCharacters($query)
+    public function session(): BelongsTo
     {
-        return $query->where('type', 'character');
-    }
-
-    public function scopeLocations($query)
-    {
-        return $query->where('type', 'location');
+        return $this->belongsTo(Session::class);
     }
 
     public function scopeEvents($query)
@@ -43,8 +40,8 @@ class CanonEntry extends Model
         return $query->where('type', 'event');
     }
 
-    public function scopeRules($query)
+    public function scopeMilestones($query)
     {
-        return $query->where('type', 'rule');
+        return $query->where('type', 'milestone');
     }
 }
