@@ -460,3 +460,31 @@ Route::get('/embeddings/project/{project}/stats', function (int $project) {
     return response()->json($gen->getProjectEmbeddingStats($project));
 })->name('api.embeddings.stats');
 
+
+
+Route::get('/search/semantic', function (Illuminate\Http\Request $request) {
+    $request->validate(['q' => 'required|string', 'project_id' => 'required|integer', 'type' => 'nullable|string', 'limit' => 'nullable|integer']);
+    
+    $search = app(\App\Services\AI\SemanticSearchService::class);
+    $type = $request->type ?? 'all';
+    $limit = $request->limit ?? 5;
+    
+    $results = match($type) {
+        'canon' => ['canon' => $search->searchCanon($request->q, $request->project_id, $limit)],
+        'references' => ['references' => $search->searchReferences($request->q, $request->project_id, $limit)],
+        'sessions' => ['sessions' => $search->searchSessions($request->q, $request->project_id, $limit)],
+        default => $search->searchAll($request->q, $request->project_id)['results'],
+    };
+    
+    return response()->json($results);
+})->name('api.search.semantic');
+
+Route::get('/search/context', function (Illuminate\Http\Request $request) {
+    $request->validate(['q' => 'required|string', 'project_id' => 'required|integer', 'threshold' => 'nullable|numeric']);
+    
+    $search = app(\App\Services\AI\SemanticSearchService::class);
+    $context = $search->getRelevantContext($request->q, $request->project_id, $request->threshold ?? 0.5);
+    
+    return response()->json($context);
+})->name('api.search.context');
+
