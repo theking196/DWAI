@@ -706,3 +706,41 @@ Route::post('/projects/{project}/conflicts/sync', function (int $project) {
     return response()->json(['synced' => $count]);
 })->name('api.conflicts.sync');
 
+
+
+# Conflict resolution
+Route::get('/conflicts/{id}/review', function (int $id) {
+    $conflict = \App\Models\Conflict::findOrFail($id);
+    if ($conflict->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    return response()->json($conflict->getReviewDetails());
+})->name('api.conflicts.review');
+
+Route::post('/conflicts/{id}/accept', function (int $id) {
+    $conflict = \App\Models\Conflict::findOrFail($id);
+    if ($conflict->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $result = $conflict->acceptSuggestion();
+    return response()->json($result);
+})->name('api.conflicts.accept');
+
+Route::post('/conflicts/{id}/reject', function (Illuminate\Http\Request $request, int $id) {
+    $conflict = \App\Models\Conflict::findOrFail($id);
+    if ($conflict->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $request->validate(['reason' => 'required|string']);
+    $conflict->rejectSuggestion($request->reason);
+    return response()->json(['status' => 'rejected']);
+})->name('api.conflicts.reject');
+
+Route::post('/conflicts/{id}/resolve-manual', function (Illuminate\Http\Request $request, int $id) {
+    $conflict = \App\Models\Conflict::findOrFail($id);
+    if ($conflict->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $conflict->resolveManually($request->all());
+    return response()->json(['status' => 'resolved']);
+})->name('api.conflicts.resolve-manual');
+
+Route::post('/conflicts/{id}/auto-resolve', function (int $id) {
+    $conflict = \App\Models\Conflict::findOrFail($id);
+    if ($conflict->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $conflict->resolve('Auto-resolved');
+    return response()->json(['status' => 'resolved']);
+})->name('api.conflicts.auto-resolve');
+
