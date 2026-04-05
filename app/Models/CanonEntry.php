@@ -230,3 +230,152 @@ class CanonEntry extends Model
         ];
     }
 }
+
+    // ============================================================
+    // Careful Merge - Preserve History
+    // ============================================================
+
+    /**
+     * Merge new data into existing canon carefully.
+     * Creates version history and doesn't overwrite.
+     */
+    public function mergeWithHistory(array $newData, ?string $reason = null): array
+    {
+        $changes = [];
+        
+        // Track what changed
+        foreach (['title', 'content', 'image', 'tags', 'importance'] as $field) {
+            if (isset($newData[$field]) && $newData[$field] !== ($this->$field ?? null)) {
+                $changes[$field] = [
+                    'old' => $this->$field,
+                    'new' => $newData[$field],
+                ];
+            }
+        }
+
+        if (empty($changes)) {
+            return ['merged' => false, 'reason' => 'No changes'];
+        }
+
+        // Create history entry before updating
+        $historyEntry = [
+            'timestamp' => now()->toISOString(),
+            'reason' => $reason ?? 'Manual merge',
+            'changes' => $changes,
+            'user_id' => auth()->id(),
+        ];
+
+        // Get existing history
+        $history = $this->metadata['merge_history'] ?? [];
+        $history[] = $historyEntry;
+        
+        // Keep last 20 merge history entries
+        if (count($history) > 20) {
+            $history = array_slice($history, -20);
+        }
+
+        // Update with new data + history
+        $this->update(array_merge($newData, [
+            'metadata' => array_merge($this->metadata ?? [], ['merge_history' => $history]),
+        ]));
+
+        return ['merged' => true, 'changes' => $changes, 'history_count' => count($history)];
+    }
+
+    /**
+     * Check if entry can be merged (validate before merge).
+     */
+    public function canMergeWith(array $newData): array
+    {
+        $issues = [];
+        $warnings = [];
+
+        // Check importance changes
+        if (isset($newData['importance'])) {
+            $currentImportance = $this->importance ?? 'none';
+            $newImportance = $newData['importance'];
+            
+            // Warn if downgrading critical
+            if ($currentImportance === 'critical' && in_array($newImportance, ['important', 'minor', 'none'])) {
+                $warnings[] = "Downgrading from critical to {$newImportance}";
+            }
+        }
+
+        // Check content length
+        if (isset($newData['content']) && strlen($newData['content']) < 50 && strlen($this->content ?? '') > 200) {
+            $warnings[] = "New content is significantly shorter than existing";
+        }
+
+        // Check for potential conflicts
+        if (isset($newData['content']) && $this->content) {
+            $similarity = similar_text($this->content, $newData['content']);
+            if ($similarity < 30) {
+                $warnings[] = "New content is very different - may conflict";
+            }
+        }
+
+        return ['valid' => empty($issues), 'issues' => $issues, 'warnings' => $warnings];
+    }
+
+    /**
+     * Create a new version instead of overwriting.
+     */
+    public function createVersion(array $newData, ?string $notes = null): CanonEntry
+    {
+        // Create new entry as a "version" of this one
+        $version = self::create([
+            'user_id' => $this->user_id,
+            'project_id' => $this->project_id,
+            'title' => $newData['title'] ?? $this->title . ' (v2)',
+            'type' => $newData['type'] ?? $this->type,
+            'content' => $newData['content'] ?? $this->content,
+            'image' => $newData['image'] ?? $this->image,
+            'tags' => array_merge($this->tags ?? [], $newData['tags'] ?? [], ['version_of_' . $this->id]),
+            'importance' => $newData['importance'] ?? $this->importance,
+            'metadata' => ['original_id' => $this->id, 'version_notes' => $notes],
+        ]);
+
+        return $version;
+    }
+
+    /**
+     * Get merge history for this entry.
+     */
+    public function getMergeHistory(int $limit = 10): array
+    {
+        $history = $this->metadata['merge_history'] ?? [];
+        return array_slice($history, -$limit);
+    }
+
+    /**
+     * Compare with another entry (for conflict detection).
+     */
+    public function compareWith(CanonEntry $other): array
+    {
+        return [
+            'same_type' => $this->type === $other->type,
+            'title_similarity' => similar_text($this->title, $other->title),
+            'content_similarity' => similar_text($this->content ?? '', $other->content ?? ''),
+            'conflicts' => $this->detectConflicts($other),
+        ];
+    }
+
+    /**
+     * Detect potential conflicts.
+     */
+    protected function detectConflicts(CanonEntry $other): array
+    {
+        $conflicts = [];
+
+        // Same type + high similarity = potential duplicate
+        if ($this->type === $other->type && similar_text($this->title, $other->title) > 70) {
+            $conflicts[] = ['type' => 'duplicate', 'message' => 'Similar entry exists'];
+        }
+
+        // Timeline conflict
+        if ($this->type === 'timeline_event' && $other->type === 'timeline_event') {
+            // Could add timeline-specific conflict detection
+        }
+
+        return $conflicts;
+    }

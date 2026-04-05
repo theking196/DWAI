@@ -367,3 +367,32 @@ Route::post('/canon-candidates/{id}/review/reject', function (Illuminate\Http\Re
     return response()->json(['status' => 'rejected']);
 })->name('api.canon-candidates.review.reject');
 
+
+
+Route::get('/canon/{id}/merge/check', function (Illuminate\Http\Request $request, int $id) {
+    $entry = \App\Models\CanonEntry::findOrFail($id);
+    if ($entry->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $check = $entry->canMergeWith($request->all());
+    return response()->json($check);
+})->name('api.canon.merge-check');
+
+Route::post('/canon/{id}/merge', function (Illuminate\Http\Request $request, int $id) {
+    $entry = \App\Models\CanonEntry::findOrFail($id);
+    if ($entry->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $result = $entry->mergeWithHistory($request->all(), $request->reason);
+    return response()->json($result);
+})->name('api.canon.merge');
+
+Route::post('/canon/{id}/version', function (Illuminate\Http\Request $request, int $id) {
+    $entry = \App\Models\CanonEntry::findOrFail($id);
+    if ($entry->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    $version = $entry->createVersion($request->all(), $request->notes);
+    return response()->json(['version_id' => $version->id]);
+})->name('api.canon.create-version');
+
+Route::get('/canon/{id}/history', function (int $id) {
+    $entry = \App\Models\CanonEntry::findOrFail($id);
+    if ($entry->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    return response()->json(['history' => $entry->getMergeHistory()]);
+})->name('api.canon.history');
+
