@@ -841,3 +841,40 @@ Route::get('/search', function (Illuminate\Http\Request $request) {
     return response()->json($results);
 })->name('api.search');
 
+
+
+# Semantic search
+Route::get('/search/semantic', function (Illuminate\Http\Request $request) {
+    $query = $request->get('q', '');
+    if (strlen($query) < 2) return response()->json(['error' => 'Query too short'], 400);
+    
+    $service = app(\App\Services\SemanticSearchService::class);
+    $results = $service->findRelevantContext($query, auth()->id(), [
+        'limit' => $request->get('limit', 10),
+        'min_score' => $request->get('min_score', 0.5),
+        'types' => $request->get('types') ? explode(',', $request->types) : null,
+    ]);
+    
+    return response()->json($results);
+})->name('api.search.semantic');
+
+Route::get('/search/context', function (Illuminate\Http\Request $request) {
+    $query = $request->get('q', '');
+    if (strlen($query) < 2) return response()->json(['error' => 'Query too short'], 400);
+    
+    $service = app(\App\Services\SemanticSearchService::class);
+    $summary = $service->getContextSummary($query, auth()->id(), $request->get('max_items', 5));
+    
+    return response()->json(['context' => $summary]);
+})->name('api.search.context');
+
+Route::post('/search/index/{type}/{id}', function (Illuminate\Http\Request $request, string $type, int $id) {
+    $service = app(\App\Services\SemanticSearchService::class);
+    try {
+        $embedding = $service->indexEntity($type, $id, $request->get('text'));
+        return response()->json(['indexed' => true, 'id' => $embedding->id]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 400);
+    }
+})->name('api.search.index');
+
