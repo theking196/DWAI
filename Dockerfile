@@ -49,5 +49,5 @@ RUN echo 'server { listen 8080 default_server; root /var/www/public; index index
 # Expose port 8080
 EXPOSE 8080
 
-# Start services
-CMD service php8.1-fpm start && nginx -g 'daemon off;'
+# Start PHP-FPM in foreground then nginx
+CMD php-fpm8.1 && nginx -g 'daemon off;'
