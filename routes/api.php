@@ -426,13 +426,6 @@ Route::post('/canon/{id}/versions/{version}/restore', function (int $id, int $ve
 })->name('api.canon.version-restore');
 
 
-
-# Add relationships for embeddings count
-    $gen = app(\App\Services\AI\EmbeddingGenerator::class);
-    $result = $gen->generateForProject($project);
-    return response()->json($result);
-})->name('api.embeddings.generate-project');
-
 Route::post('/embeddings/generate/{type}/{id}', function (string $type, int $id) {
     $gen = app(\App\Services\AI\EmbeddingGenerator::class);
     $emb = $gen->generateFor($type, $id);
