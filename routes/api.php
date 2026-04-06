@@ -1199,9 +1199,17 @@ Route::get('/backup/list', function () {
     return response()->json($service->listBackups());
 })->name('api.backup.list');
 
-Route::post('/backup/restore', function (Illuminate\Http\Request $request) {
+Route::post('/backup/restore', function (IlluminateHttpRequest $request), function (Illuminate\Http\Request $request) {
     $service = app(\App\Services\BackupService::class);
     $success = $service->restoreBackup($request->filename);
     return response()->json(['restored' => $success]);
 })->name('api.backup.restore');
+
+
+
+Route::post('/backup/preview', function (Illuminate\Http\Request $request) {
+    $service = app(\App\Services\BackupService::class);
+    $preview = $service->previewRestore($request->filename);
+    return response()->json($preview);
+})->name('api.backup.preview');
 

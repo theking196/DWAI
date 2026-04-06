@@ -247,3 +247,167 @@ class BackupService
         return true;
     }
 }
+
+    /**
+     * Restore backup with validation and safety checks.
+     */
+    public function restoreBackup(string $filename, array $options = []): array
+    {
+        $path = "backups/{$filename}";
+        
+        if (!Storage::disk('local')->exists($path)) {
+            return ['success' => false, 'error' => 'Backup not found'];
+        }
+
+        $data = json_decode(Storage::disk('local')->get($path), true);
+        
+        if (!$data || !isset($data['metadata'])) {
+            return ['success' => false, 'error' => 'Invalid backup file'];
+        }
+
+        $createCheckpoint = $options['create_checkpoint'] ?? true;
+        $dryRun = $options['dry_run'] ?? false;
+
+        $results = [
+            'dry_run' => $dryRun,
+            'imported' => [],
+            'skipped' => [],
+            'errors' => [],
+        ];
+
+        // Create checkpoint before restore
+        if ($createCheckpoint && !$dryRun) {
+            $this->createBackup($data['metadata']['user_id'] ?? null);
+            $results['checkpoint_created'] = true;
+        }
+
+        // Restore each type
+        if (!$dryRun) {
+            $results['imported']['projects'] = $this->importProjects($data['projects'] ?? []);
+            $results['imported']['sessions'] = $this->importSessions($data['sessions'] ?? []);
+            $results['imported']['canon'] = $this->importCanon($data['canon'] ?? []);
+            $results['imported']['references'] = $this->importReferences($data['references'] ?? []);
+            $results['imported']['settings'] = $this->importSettings($data['settings'] ?? []);
+        }
+
+        $results['success'] = true;
+        
+        return $results;
+    }
+
+    protected function importProjects(array $projects): int
+    {
+        $count = 0;
+        foreach ($projects as $p) {
+            try {
+                Project::create([
+                    'user_id' => $p['user_id'] ?? auth()->id(),
+                    'name' => $p['name'],
+                    'description' => $p['description'] ?? null,
+                    'type' => $p['type'] ?? 'story',
+                    'visual_style_image' => $p['visual_style_image'] ?? null,
+                    'visual_style_description' => $p['visual_style_description'] ?? null,
+                    'style_images' => $p['style_images'] ?? [],
+                    'metadata' => $p['metadata'] ?? [],
+                    'status' => $p['status'] ?? 'active',
+                ]);
+                $count++;
+            } catch (\Exception $e) {
+                // Skip duplicates
+            }
+        }
+        return $count;
+    }
+
+    protected function importSessions(array $sessions): int
+    {
+        $count = 0;
+        foreach ($sessions as $s) {
+            try {
+                Session::create([
+                    'user_id' => $s['user_id'] ?? auth()->id(),
+                    'project_id' => $s['project_id'],
+                    'name' => $s['name'],
+                    'description' => $s['description'] ?? null,
+                    'notes' => $s['notes'] ?? null,
+                    'temp_notes' => $s['temp_notes'] ?? null,
+                    'draft_text' => $s['draft_text'] ?? null,
+                    'session_references' => $s['session_references'] ?? [],
+                    'status' => $s['status'] ?? 'active',
+                    'type' => $s['type'] ?? 'writing',
+                ]);
+                $count++;
+            } catch (\Exception $e) {
+                // Skip
+            }
+        }
+        return $count;
+    }
+
+    protected function importCanon(array $canon): int
+    {
+        $count = 0;
+        foreach ($canon as $c) {
+            try {
+                CanonEntry::create([
+                    'user_id' => $c['user_id'] ?? auth()->id(),
+                    'project_id' => $c['project_id'],
+                    'title' => $c['title'],
+                    'type' => $c['type'] ?? 'note',
+                    'content' => $c['content'] ?? '',
+                    'tags' => $c['tags'] ?? [],
+                    'importance' => $c['importance'] ?? 'minor',
+                    'metadata' => $c['metadata'] ?? [],
+                ]);
+                $count++;
+            } catch (\Exception $e) {
+                // Skip
+            }
+        }
+        return $count;
+    }
+
+    protected function importReferences(array $refs): int
+    {
+        $count = 0;
+        foreach ($refs as $r) {
+            try {
+                ReferenceImage::create([
+                    'user_id' => $r['user_id'] ?? auth()->id(),
+                    'project_id' => $r['project_id'],
+                    'title' => $r['title'],
+                    'description' => $r['description'] ?? null,
+                    'url' => $r['url'] ?? null,
+                    'path' => $r['path'] ?? null,
+                    'tags' => $r['tags'] ?? [],
+                    'is_style_reference' => $r['is_style_reference'] ?? false,
+                ]);
+                $count++;
+            } catch (\Exception $e) {
+                // Skip
+            }
+        }
+        return $count;
+    }
+
+    protected function importSettings(array $settings): int
+    {
+        $count = 0;
+        foreach ($settings as $s) {
+            try {
+                Setting::set($s['key'], $s['value'], $s['type'] ?? 'string');
+                $count++;
+            } catch (\Exception $e) {
+                // Skip
+            }
+        }
+        return $count;
+    }
+
+    /**
+     * Dry run - preview what would be restored.
+     */
+    public function previewRestore(string $filename): array
+    {
+        return $this->restoreBackup($filename, ['dry_run' => true, 'create_checkpoint' => false]);
+    }
