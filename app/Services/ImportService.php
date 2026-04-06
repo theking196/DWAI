@@ -146,3 +146,104 @@ class ImportService
         return $results;
     }
 }
+
+    // ============================================================
+    // Bulk Reference Image Import
+    // ============================================================
+
+    /**
+     * Bulk import reference images with grouping.
+     */
+    public function bulkImportReferences(
+        int $projectId,
+        array $files,
+        array $options = []
+    ): array {
+        $targetType = $options['target_type'] ?? 'project'; // project, session, style
+        $targetId = $options['target_id'] ?? $projectId;
+        $tags = $options['tags'] ?? ['imported'];
+        $isStyleRef = $options['is_style_reference'] ?? false;
+
+        $results = ['imported' => [], 'errors' => []];
+
+        foreach ($files as $file) {
+            try {
+                $path = $file->store("references/{$projectId}");
+                
+                $ref = ReferenceImage::create([
+                    'user_id' => auth()->id(),
+                    'project_id' => $projectId,
+                    'title' => $options['title_prefix'] 
+                        ? $options['title_prefix'] . ' ' . count($results['imported'] + 1)
+                        : $file->getClientOriginalName(),
+                    'description' => $options['description'] ?? null,
+                    'path' => $path,
+                    'url' => asset('storage/' . $path),
+                    'file_size' => $file->getSize(),
+                    'mime_type' => $file->getMimeType(),
+                    'tags' => $tags,
+                    'is_style_reference' => $isStyleRef,
+                    'metadata' => [
+                        'target_type' => $targetType,
+                        'target_id' => $targetId,
+                        'imported_at' => now()->toISOString(),
+                    ],
+                ]);
+
+                $results['imported'][] = [
+                    'id' => $ref->id,
+                    'title' => $ref->title,
+                    'url' => $ref->url,
+                    'is_style_reference' => $ref->is_style_reference,
+                ];
+            } catch (\Exception $e) {
+                $results['errors'][] = [
+                    'file' => $file->getClientOriginalName(),
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        // If style reference, add to project style
+        if ($isStyleRef && !empty($results['imported'])) {
+            $project = Project::find($projectId);
+            $existing = $project->style_images ?? [];
+            
+            foreach ($results['imported'] as $img) {
+                $existing[] = [
+                    'path' => ReferenceImage::find($img['id'])->path,
+                    'title' => $img['title'],
+                ];
+            }
+            
+            $project->update(['style_images' => $existing]);
+        }
+
+        return $results;
+    }
+
+    /**
+     * Import from directory.
+     */
+    public function importFromDirectory(
+        int $projectId,
+        string $directory,
+        array $options = []
+    ): array {
+        if (!Storage::disk('local')->exists($directory)) {
+            return ['imported' => [], 'errors' => ['Directory not found']];
+        }
+
+        $files = [];
+        $contents = Storage::disk('local')->files($directory);
+        
+        foreach ($contents as $file) {
+            if (in_array(pathinfo($file, PATHINFO_EXTENSION), ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                $files[] = $file;
+            }
+        }
+
+        // Would need UploadedFile handling for directory imports
+        // This is a placeholder for the method signature
+        return ['files_found' => count($files), 'directory' => $directory];
+    }

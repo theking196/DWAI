@@ -1285,3 +1285,22 @@ Route::post('/projects/{id}/import/batch', function (Illuminate\Http\Request $re
     return response()->json($result);
 })->name('api.projects.import-batch');
 
+
+
+Route::post('/projects/{id}/import/references', function (Illuminate\Http\Request $request, int $id) {
+    $request->validate(['files' => 'required|array']);
+    $service = app(\App\Services\ImportService::class);
+    $result = $service->bulkImportReferences($id, $request->file('files'), $request->except('files'));
+    return response()->json($result);
+})->name('api.projects.import-references');
+
+Route::post('/projects/{id}/import/style-references', function (Illuminate\Http\Request $request, int $id) {
+    $request->validate(['files' => 'required|array']);
+    $service = app(\App\Services\ImportService::class);
+    $result = $service->bulkImportReferences($id, $request->file('files'), [
+        'is_style_reference' => true,
+        'tags' => ['style', 'imported'],
+    ]);
+    return response()->json($result);
+})->name('api.projects.import-style-references');
+
