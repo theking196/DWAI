@@ -23,10 +23,10 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www
 
-# Copy only composer files first
-COPY composer.json composer.lock ./
+# Copy entire app
+COPY . .
 
-# Create directories BEFORE composer install
+# Create required directories
 RUN mkdir -p bootstrap/cache \
     && mkdir -p storage/framework/cache \
     && mkdir -p storage/framework/sessions \
@@ -35,11 +35,11 @@ RUN mkdir -p bootstrap/cache \
     && chmod 777 bootstrap/cache \
     && chmod -R 777 storage
 
-# Install dependencies without scripts (skip post-autoload-dump)
-RUN composer install --ignore-platform-reqs --no-scripts
+# Install dependencies (generates autoload without scripts)
+RUN composer install --ignore-platform-reqs --no-scripts --no-dev
 
-# Copy rest of app
-COPY . .
+# Generate Laravel key if not set
+RUN php artisan key:generate --force || true
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www
