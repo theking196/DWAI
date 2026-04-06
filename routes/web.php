@@ -84,3 +84,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
     Route::delete('/sessions/{session}', [SessionController::class, 'destroy'])->name('sessions.destroy');
 });
+
+
+# DWAI Views
+Route::get('/dwai', [App\Http\Controllers\DWAI\DashboardController::class, 'index'])->name('dwai.dashboard');
+
