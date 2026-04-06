@@ -23,22 +23,26 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www
 
-# Copy application
-COPY . .
+# Copy only composer files first
+COPY composer.json composer.lock ./
 
-# Create required directories
+# Create directories BEFORE composer install
 RUN mkdir -p bootstrap/cache \
     && mkdir -p storage/framework/cache \
     && mkdir -p storage/framework/sessions \
     && mkdir -p storage/framework/views \
     && mkdir -p storage/logs \
-    && chmod -R 775 bootstrap/cache storage
+    && chmod 777 bootstrap/cache \
+    && chmod -R 777 storage
+
+# Install dependencies without scripts (skip post-autoload-dump)
+RUN composer install --ignore-platform-reqs --no-scripts
+
+# Copy rest of app
+COPY . .
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www
-
-# Install dependencies
-RUN composer install --ignore-platform-reqs --optimize-autoloader
 
 # Expose port
 EXPOSE 9000
