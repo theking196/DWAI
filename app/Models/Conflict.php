@@ -87,4 +87,3 @@ class Conflict extends Model
         return $count;
     }
 }
-}
