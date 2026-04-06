@@ -23,6 +23,9 @@ class Session extends Model
     protected $casts = [
         'output_count' => 'integer',
         'session_references' => 'array',
+        'assistant_structure' => 'array',
+        'assistant_image_prompts' => 'array',
+        'assistant_video_prompts' => 'array',
         'context_updated_at' => 'datetime',
         'archived_at' => 'datetime',
         'activity_history' => 'array',
@@ -375,4 +378,218 @@ class Session extends Model
     {
         $override = $this->style_override;
         return $override['description'] ?? null;
+    }
+
+    // ============================================================
+    // Assistant Agent Mode
+    // ============================================================
+
+    /**
+     * Assistant phases.
+     */
+    const ASSISTANT_PHASES = [
+        'idea_input' => 'Idea Input',
+        'idea_refinement' => 'Idea Refinement',
+        'structure_planning' => 'Structure Planning',
+        'image_prompts' => 'Image Prompts',
+        'video_prompts' => 'Video Prompts',
+        'music_prompt' => 'Music Prompt',
+        'complete' => 'Complete',
+    ];
+
+    /**
+     * Get current assistant phase.
+     */
+    public function getAssistantPhase(): string
+    {
+        return $this->assistant_phase ?? 'idea_input';
+    }
+
+    /**
+     * Set assistant phase.
+     */
+    public function setAssistantPhase(string $phase): void
+    {
+        if (in_array($phase, array_keys(self::ASSISTANT_PHASES))) {
+            $this->update(['assistant_phase' => $phase]);
+        }
+    }
+
+    /**
+     * Get assistant idea.
+     */
+    public function getAssistantIdea(): ?string
+    {
+        return $this->assistant_idea;
+    }
+
+    /**
+     * Set assistant idea.
+     */
+    public function setAssistantIdea(string $idea): void
+    {
+        $this->update(['assistant_idea' => $idea]);
+    }
+
+    /**
+     * Get refined idea.
+     */
+    public function getAssistantRefinedIdea(): ?string
+    {
+        return $this->assistant_refined_idea;
+    }
+
+    /**
+     * Set refined idea.
+     */
+    public function setAssistantRefinedIdea(string $idea): void
+    {
+        $this->update(['assistant_refined_idea' => $idea]);
+    }
+
+    /**
+     * Get assistant structure.
+     */
+    public function getAssistantStructure(): array
+    {
+        return $this->assistant_structure ?? [];
+    }
+
+    /**
+     * Set assistant structure.
+     */
+    public function setAssistantStructure(array $structure): void
+    {
+        $this->update(['assistant_structure' => $structure]);
+    }
+
+    /**
+     * Update assistant structure incrementally.
+     */
+    public function updateAssistantStructure(array $updates): void
+    {
+        $current = $this->getAssistantStructure();
+        $this->update(['assistant_structure' => array_merge($current, $updates)]);
+    }
+
+    /**
+     * Get image prompts.
+     */
+    public function getAssistantImagePrompts(): array
+    {
+        return $this->assistant_image_prompts ?? [];
+    }
+
+    /**
+     * Set image prompts.
+     */
+    public function setAssistantImagePrompts(array $prompts): void
+    {
+        $this->update(['assistant_image_prompts' => $prompts]);
+    }
+
+    /**
+     * Add image prompt.
+     */
+    public function addAssistantImagePrompt(string $prompt): void
+    {
+        $prompts = $this->getAssistantImagePrompts();
+        $prompts[] = $prompt;
+        $this->update(['assistant_image_prompts' => $prompts]);
+    }
+
+    /**
+     * Get video prompts.
+     */
+    public function getAssistantVideoPrompts(): array
+    {
+        return $this->assistant_video_prompts ?? [];
+    }
+
+    /**
+     * Set video prompts.
+     */
+    public function setAssistantVideoPrompts(array $prompts): void
+    {
+        $this->update(['assistant_video_prompts' => $prompts]);
+    }
+
+    /**
+     * Add video prompt.
+     */
+    public function addAssistantVideoPrompt(string $prompt): void
+    {
+        $prompts = $this->getAssistantVideoPrompts();
+        $prompts[] = $prompt;
+        $this->update(['assistant_video_prompts' => $prompts]);
+    }
+
+    /**
+     * Get music prompt.
+     */
+    public function getAssistantMusicPrompt(): ?string
+    {
+        return $this->assistant_music_prompt;
+    }
+
+    /**
+     * Set music prompt.
+     */
+    public function setAssistantMusicPrompt(string $prompt): void
+    {
+        $this->update(['assistant_music_prompt' => $prompt]);
+    }
+
+    /**
+     * Get complete assistant state.
+     */
+    public function getAssistantState(): array
+    {
+        return [
+            'phase' => $this->getAssistantPhase(),
+            'phase_label' => self::ASSISTANT_PHASES[$this->getAssistantPhase()] ?? 'Unknown',
+            'idea' => $this->getAssistantIdea(),
+            'refined_idea' => $this->getAssistantRefinedIdea(),
+            'structure' => $this->getAssistantStructure(),
+            'image_prompts' => $this->getAssistantImagePrompts(),
+            'video_prompts' => $this->getAssistantVideoPrompts(),
+            'music_prompt' => $this->getAssistantMusicPrompt(),
+        ];
+    }
+
+    /**
+     * Advance to next phase.
+     */
+    public function advanceAssistantPhase(): void
+    {
+        $phases = array_keys(self::ASSISTANT_PHASES);
+        $current = array_search($this->getAssistantPhase(), $phases);
+        
+        if ($current !== false && $current < count($phases) - 1) {
+            $this->update(['assistant_phase' => $phases[$current + 1]]);
+        }
+    }
+
+    /**
+     * Check if assistant is complete.
+     */
+    public function isAssistantComplete(): bool
+    {
+        return $this->getAssistantPhase() === 'complete';
+    }
+
+    /**
+     * Reset assistant state.
+     */
+    public function resetAssistantState(): void
+    {
+        $this->update([
+            'assistant_phase' => 'idea_input',
+            'assistant_idea' => null,
+            'assistant_refined_idea' => null,
+            'assistant_structure' => null,
+            'assistant_image_prompts' => null,
+            'assistant_video_prompts' => null,
+            'assistant_music_prompt' => null,
+        ]);
     }
