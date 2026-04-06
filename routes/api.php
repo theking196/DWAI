@@ -1321,3 +1321,25 @@ Route::post('/sessions/import', function (Illuminate\Http\Request $request, int 
     return response()->json($result);
 })->name('api.sessions.import');
 
+
+
+# Session import
+Route::post('/sessions/{id}/import/notes', function (Illuminate\Http\Request $request, int $id) {
+    $service = app(\App\Services\ImportService::class);
+    $result = $service->importToSession($id, $request->content, $request->get('mode', 'append'));
+    return response()->json($result);
+})->name('api.sessions.import-notes');
+
+Route::post('/sessions/{id}/import/draft', function (Illuminate\Http\Request $request, int $id) {
+    $service = app(\App\Services\ImportService::class);
+    $result = $service->importDraftToSession($id, $request->content, $request->get('mode', 'append'));
+    return response()->json($result);
+})->name('api.sessions.import-draft');
+
+Route::post('/sessions/{id}/import/file', function (Illuminate\Http\Request $request, int $id) {
+    $request->validate(['file' => 'required|file']);
+    $service = app(\App\Services\ImportService::class);
+    $result = $service->importFileToSession($id, $request->file('file'), $request->get('target', 'notes'), $request->get('mode', 'append'));
+    return response()->json($result);
+})->name('api.sessions.import-file');
+

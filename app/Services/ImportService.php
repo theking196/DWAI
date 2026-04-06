@@ -403,3 +403,107 @@ class ImportService
             'imported' => $results,
         ];
     }
+
+    // ============================================================
+    // Session Import (Notes/Drafts)
+    // ============================================================
+
+    /**
+     * Import notes into session.
+     */
+    public function importToSession(
+        int $sessionId,
+        string $content,
+        string $mode = 'append'
+    ): array {
+        $session = Session::findOrFail($sessionId);
+        
+        if ($session->user_id !== auth()->id()) {
+            return ['success' => false, 'error' => 'Unauthorized'];
+        }
+
+        $existing = $session->notes ?? '';
+        
+        $newContent = match($mode) {
+            'append' => $existing . "\n\n" . $content,
+            'prepend' => $content . "\n\n" . $existing,
+            'replace' => $content,
+            default => $content,
+        };
+
+        $session->update(['notes' => $newContent]);
+
+        return [
+            'success' => true,
+            'session_id' => $sessionId,
+            'mode' => $mode,
+            'character_count' => strlen($newContent),
+        ];
+    }
+
+    /**
+     * Import draft text into session.
+     */
+    public function importDraftToSession(
+        int $sessionId,
+        string $content,
+        string $mode = 'append'
+    ): array {
+        $session = Session::findOrFail($sessionId);
+        
+        if ($session->user_id !== auth()->id()) {
+            return ['success' => false, 'error' => 'Unauthorized'];
+        }
+
+        $existing = $session->draft_text ?? '';
+        
+        $newContent = match($mode) {
+            'append' => $existing . "\n\n---\n\n" . $content,
+            'prepend' => $content . "\n\n---\n\n" . $existing,
+            'replace' => $content,
+            default => $content,
+        };
+
+        $session->update(['draft_text' => $newContent]);
+
+        return [
+            'success' => true,
+            'session_id' => $sessionId,
+            'mode' => $mode,
+            'word_count' => str_word_count($newContent),
+        ];
+    }
+
+    /**
+     * Import file to session notes or draft.
+     */
+    public function importFileToSession(
+        int $sessionId,
+        UploadedFile $file,
+        string $target = 'notes', // notes, draft
+        string $mode = 'append'
+    ): array {
+        $content = $this->extractContent($file);
+        
+        if ($target === 'draft') {
+            return $this->importDraftToSession($sessionId, $content, $mode);
+        }
+        
+        return $this->importToSession($sessionId, $content, $mode);
+    }
+
+    /**
+     * Import from text directly.
+     */
+    public function importTextToSession(
+        int $sessionId,
+        string $text,
+        string $target = 'notes',
+        string $mode = 'append'
+    ): array {
+        if ($target === 'draft') {
+            return $this->importDraftToSession($sessionId, $text, $mode);
+        }
+        
+        return $this->importToSession($sessionId, $text, $mode);
+    }
