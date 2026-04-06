@@ -1411,3 +1411,10 @@ Route::get('/dwai/unified/search', function (Illuminate\Http\Request $request) {
     return response()->json($service->search($request->q, auth()->id(), $request->all()));
 })->name('api.unified.search');
 
+
+
+# Assistant Controller Routes
+Route::post('/dwai/assistant/{sessionId}/handle', [App\Http\Controllers\DWAI\AssistantController::class, 'handle']);
+Route::get('/dwai/assistant/{sessionId}/state', [App\Http\Controllers\DWAI\AssistantController::class, 'state']);
+Route::post('/dwai/assistant/{sessionId}/reset', [App\Http\Controllers\DWAI\AssistantController::class, 'reset']);
+
