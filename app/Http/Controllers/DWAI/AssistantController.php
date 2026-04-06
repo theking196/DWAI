@@ -7,16 +7,19 @@ use App\Models\Session;
 use App\Models\Project;
 use App\Models\AIOutput;
 use App\Services\AI\AIService;
+    use App\Services\DWAI\AssistantContextService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class AssistantController extends Controller
 {
     protected AIService $aiService;
+    protected AssistantContextService $contextService;
 
     public function __construct()
     {
         $this->aiService = app(AIService::class);
+        $this->contextService = app(AssistantContextService::class);
     }
 
     /**
@@ -54,6 +57,12 @@ class AssistantController extends Controller
     {
         if (empty($input)) {
             return [
+                'message' => "Tell me more about the characters, setting, and mood you want.",
+                'current_phase' => 'idea_refinement',
+                'phase_label' => 'Idea Refinement',
+                'generated_outputs' => null,
+            ];
+            return [
                 'message' => "Welcome to DWAI Assistant! I'm here to help you create your visual story. Tell me about your idea - what story do you want to tell?",
                 'current_phase' => 'idea_input',
                 'phase_label' => 'Idea Input',
@@ -78,6 +87,12 @@ class AssistantController extends Controller
     protected function handleRefining(Session $session, string $input): array
     {
         if (empty($input)) {
+            return [
+                'message' => "Tell me more about the characters, setting, and mood you want.",
+                'current_phase' => 'idea_refinement',
+                'phase_label' => 'Idea Refinement',
+                'generated_outputs' => null,
+            ];
             return [
                 'message' => "Keep building! What's the emotional arc? Any visual references? Say 'done' when ready.",
                 'current_phase' => 'idea_refinement',
@@ -252,3 +267,14 @@ class AssistantController extends Controller
         return response()->json(['reset' => true]);
     }
 }
+
+    // Use context service for prompts
+    protected function getContextForSession(Session $session): array
+    {
+        return $this->contextService->buildContext($session);
+    }
+
+    protected function buildPromptForPhase(string $phase, array $context, string $input = ''): string
+    {
+        return $this->contextService->buildPrompt($phase, $context, $input);
+    }
