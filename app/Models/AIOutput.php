@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AIOutput extends Model
+    protected $table = 'ai_outputs';
 {
     use HasFactory;
 
