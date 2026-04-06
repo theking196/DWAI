@@ -1304,3 +1304,20 @@ Route::post('/projects/{id}/import/style-references', function (Illuminate\Http\
     return response()->json($result);
 })->name('api.projects.import-style-references');
 
+
+
+# Project package import
+Route::post('/projects/import', function (Illuminate\Http\Request $request) {
+    $request->validate(['file' => 'required|file|mimes:json']);
+    $service = app(\App\Services\ImportService::class);
+    $result = $service->importProjectPackage($request->file('file'), $request->except('file'));
+    return response()->json($result);
+})->name('api.projects.import');
+
+Route::post('/sessions/import', function (Illuminate\Http\Request $request, int $projectId) {
+    $request->validate(['file' => 'required|file|mimes:json']);
+    $service = app(\App\Services\ImportService::class);
+    $result = $service->importSessionPackage($projectId, $request->file('file'), $request->except('file'));
+    return response()->json($result);
+})->name('api.sessions.import');
+

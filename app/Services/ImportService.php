@@ -247,3 +247,159 @@ class ImportService
         // This is a placeholder for the method signature
         return ['files_found' => count($files), 'directory' => $directory];
     }
+
+    // ============================================================
+    // Project Package Import (.dwai files)
+    // ============================================================
+
+    /**
+     * Import a .dwai project package.
+     */
+    public function importProjectPackage(
+        UploadedFile $file,
+        array $options = []
+    ): array {
+        $content = file_get_contents($file->getRealPath());
+        $data = json_decode($content, true);
+        
+        if (!$data || !isset($data['metadata']) || $data['metadata']['type'] !== 'dwai_project') {
+            return ['success' => false, 'error' => 'Invalid project package'];
+        }
+
+        $merge = $options['merge'] ?? false;
+        $importRefs = $options['import_references'] ?? true;
+        $importCanon = $options['import_canon'] ?? true;
+        $importSessions = $options['import_sessions'] ?? true;
+
+        $projectId = null;
+        $results = ['project' => null, 'sessions' => [], 'canon' => [], 'references' => []];
+
+        // Import project
+        if ($merge && isset($data['project']['name'])) {
+            // Find existing or create
+            $project = Project::where('name', $data['project']['name'])->first();
+            if ($project) {
+                $projectId = $project->id;
+            }
+        }
+        
+        if (!$projectId) {
+            $project = Project::create([
+                'user_id' => auth()->id(),
+                'name' => $data['project']['name'],
+                'description' => $data['project']['description'] ?? null,
+                'type' => $data['project']['type'] ?? 'story',
+                'visual_style_image' => $data['project']['visual_style_image'] ?? null,
+                'visual_style_description' => $data['project']['visual_style_description'] ?? null,
+                'style_images' => $data['project']['style_images'] ?? [],
+            ]);
+            $projectId = $project->id;
+        }
+        
+        $results['project'] = ['id' => $projectId, 'name' => $data['project']['name']];
+
+        // Import canon
+        if ($importCanon && !empty($data['canon'])) {
+            foreach ($data['canon'] as $c) {
+                $canon = CanonEntry::create([
+                    'user_id' => auth()->id(),
+                    'project_id' => $projectId,
+                    'title' => $c['title'],
+                    'type' => $c['type'] ?? 'note',
+                    'content' => $c['content'] ?? '',
+                    'tags' => $c['tags'] ?? [],
+                    'importance' => $c['importance'] ?? 'minor',
+                ]);
+                $results['canon'][] = ['id' => $canon->id, 'title' => $canon->title];
+            }
+        }
+
+        // Import references
+        if ($importRefs && !empty($data['references'])) {
+            foreach ($data['references'] as $r) {
+                $ref = ReferenceImage::create([
+                    'user_id' => auth()->id(),
+                    'project_id' => $projectId,
+                    'title' => $r['title'],
+                    'description' => $r['description'] ?? null,
+                    'url' => $r['url'] ?? null,
+                    'tags' => $r['tags'] ?? [],
+                    'is_style_reference' => $r['is_style_reference'] ?? false,
+                ]);
+                $results['references'][] = ['id' => $ref->id, 'title' => $ref->title];
+            }
+        }
+
+        // Import sessions
+        if ($importSessions && !empty($data['sessions'])) {
+            foreach ($data['sessions'] as $s) {
+                $session = Session::create([
+                    'user_id' => auth()->id(),
+                    'project_id' => $projectId,
+                    'name' => $s['name'],
+                    'description' => $s['description'] ?? null,
+                    'notes' => $s['notes'] ?? null,
+                    'draft_text' => $s['draft_text'] ?? null,
+                    'status' => $s['status'] ?? 'active',
+                    'type' => $s['type'] ?? 'writing',
+                ]);
+                $results['sessions'][] = ['id' => $session->id, 'name' => $session->name];
+            }
+        }
+
+        return [
+            'success' => true,
+            'project_id' => $projectId,
+            'imported' => $results,
+        ];
+    }
+
+    /**
+     * Import session package.
+     */
+    public function importSessionPackage(
+        int $projectId,
+        UploadedFile $file,
+        array $options = []
+    ): array {
+        $content = file_get_contents($file->getRealPath());
+        $data = json_decode($content, true);
+        
+        if (!$data || !isset($data['metadata']) || $data['metadata']['type'] !== 'dwai_session') {
+            return ['success' => false, 'error' => 'Invalid session package'];
+        }
+
+        // Create session
+        $session = Session::create([
+            'user_id' => auth()->id(),
+            'project_id' => $projectId,
+            'name' => $data['session']['name'],
+            'description' => $data['session']['description'] ?? null,
+            'notes' => $data['session']['notes'] ?? null,
+            'draft_text' => $data['session']['draft_text'] ?? null,
+            'status' => 'active',
+            'type' => $data['session']['type'] ?? 'writing',
+        ]);
+
+        $results = ['session' => ['id' => $session->id, 'name' => $session->name]];
+
+        // Import outputs
+        if (!empty($data['outputs'])) {
+            foreach ($data['outputs'] as $o) {
+                AIOutput::create([
+                    'session_id' => $session->id,
+                    'prompt' => $o['prompt'],
+                    'result' => $o['result'],
+                    'type' => $o['type'],
+                    'model' => $o['model'],
+                    'status' => 'completed',
+                ]);
+            }
+        }
+
+        return [
+            'success' => true,
+            'session_id' => $session->id,
+            'imported' => $results,
+        ];
+    }
