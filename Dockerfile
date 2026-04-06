@@ -1,5 +1,9 @@
 FROM ubuntu:22.04
 
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
 # Install PHP, NGINX, and dependencies
 RUN apt-get update && apt-get install -y \
     php8.1-fpm \
