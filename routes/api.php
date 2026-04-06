@@ -1254,3 +1254,34 @@ Route::get('/backup/cron', function () {
     return response()->json(['cron' => app(\App\Services\ScheduledBackupService::class)->getCronExpression()]);
 })->name('api.backup.cron');
 
+
+
+# Import
+Route::post('/projects/{id}/import/canon', function (Illuminate\Http\Request $request, int $id) {
+    $request->validate(['file' => 'required|file']);
+    $service = app(\App\Services\ImportService::class);
+    $result = $service->importAsCanon($id, $request->file('file'), $request->except('file'));
+    return response()->json($result);
+})->name('api.projects.import-canon');
+
+Route::post('/projects/{id}/import/reference', function (Illuminate\Http\Request $request, int $id) {
+    $request->validate(['file' => 'required|file|mimes:jpg,jpeg,png,gif,webp']);
+    $service = app(\App\Services\ImportService::class);
+    $result = $service->importAsReference($id, $request->file('file'), $request->except('file'));
+    return response()->json($result);
+})->name('api.projects.import-reference');
+
+Route::post('/projects/{id}/import/auto', function (Illuminate\Http\Request $request, int $id) {
+    $request->validate(['file' => 'required|file']);
+    $service = app(\App\Services\ImportService::class);
+    $result = $service->importAuto($id, $request->file('file'), $request->except('file'));
+    return response()->json($result);
+})->name('api.projects.import-auto');
+
+Route::post('/projects/{id}/import/batch', function (Illuminate\Http\Request $request, int $id) {
+    $request->validate(['files' => 'required|array']);
+    $service = app(\App\Services\ImportService::class);
+    $result = $service->batchImport($id, $request->file('files'), $request->get('mode', 'auto'));
+    return response()->json($result);
+})->name('api.projects.import-batch');
+
