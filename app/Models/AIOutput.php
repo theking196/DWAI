@@ -64,4 +64,3 @@ class AIOutput extends Model
         return $this->type === 'image';
     }
 }
-}
