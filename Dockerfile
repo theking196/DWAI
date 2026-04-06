@@ -41,8 +41,8 @@ RUN chown -R www-data:www-data /var/www
 # Install dependencies
 RUN composer install --ignore-platform-reqs --no-scripts --no-dev
 
-# Expose port
-EXPOSE 9000
+# Expose port 8080 (Railway default)
+EXPOSE 8080
 
-# Start PHP-FPM
-CMD ["php-fpm"]
+# Start PHP-FPM listening on port 8080
+CMD ["php-fpm", "-y", "/etc/php-fpm.conf", "-R"]
