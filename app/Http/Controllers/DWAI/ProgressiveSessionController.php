@@ -4,6 +4,7 @@ namespace App\Http\Controllers\DWAI;
 
 use App\Http\Controllers\Controller;
 use App\Models\Session;
+use App\Models\Project;
 use App\Services\AI\AIService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -198,26 +199,117 @@ class ProgressiveSessionController extends Controller
     }
 
     /**
-     * Build prompt for a specific step.
+     * Build prompt for a specific step with full context.
      */
     protected function buildStepPrompt(string $step, int $index, array $allSteps, string $userInput, Session $session): string
     {
         $project = $session->project;
         $style = $project?->getVisualStyleDescription() ?? 'cinematic';
         
-        return match($step) {
-            'concept' => "Expand this concept into a clear premise: {$userInput}. Style: {$style}",
-            'characters' => "Define main characters for: {$userInput}. Include names, descriptions, motivations.",
-            'setting' => "Describe the setting/environment for: {$userInput}. Include atmosphere and visual details.",
-            'plot' => "Outline the main plot points for: {$userInput}. Include 3-5 key events.",
-            'conflict' => "Identify the main conflict in: {$userInput}. What's the stakes?",
-            'resolution' => "Describe the resolution for: {$userInput}. How does it end?",
-            'emotion' => "What emotional journey does this story follow: {$userInput}?",
-            'visuals' => "Create visual descriptions for key scenes in: {$userInput}. Include camera angles and lighting.",
-            'audio' => "Suggest music/mood for: {$userInput}. Include tempo and instrumentation.",
-            'final' => "Compile all elements into a final production summary: {$userInput}",
-            default => "Develop the {$step} aspect of: {$userInput}",
+        // Get previous step outputs for continuity
+        $previousOutputs = $this->getPreviousOutputs($allSteps, $index);
+        
+        // Get relevant canon entries
+        $canon = $this->getRelevantCanon($project);
+        
+        // Get reference images
+        $references = $this->getReferences($project);
+        
+        // Build contextual prompt
+        $prompt = $this->buildContextualPrompt($step, $index, $userInput, $previousOutputs, $style, $canon, $references);
+        
+        return $prompt;
+    }
+    
+    /**
+     * Get outputs from all previous completed steps.
+     */
+    protected function getPreviousOutputs(array $steps, int $currentIndex): string
+    {
+        $outputs = [];
+        
+        for ($i = 0; $i < $currentIndex; $i++) {
+            $stepData = $steps[$i] ?? null;
+            $stepName = is_array($stepData) ? ($stepData['name'] ?? $i) : $stepData;
+            if ($stepData['status'] ?? '' === 'completed') {
+                $outputs[] = "Step {$i}: {$stepName}";
+            }
+        }
+        
+        return implode("\n", $outputs);
+    }
+    
+    /**
+     * Get relevant canon entries.
+     */
+    protected function getRelevantCanon(?Project $project): string
+    {
+        if (!$project) return '';
+        
+        $entries = $project->canonEntries()
+            ->whereIn('importance', ['important', 'critical'])
+            ->limit(5)
+            ->get(['title', 'content']);
+        
+        if ($entries->isEmpty()) return '';
+        
+        return "EXISTING CANON:\n" . $entries->map(fn($e) => "- {$e->title}: " . substr($e->content, 0, 100))->implode("\n");
+    }
+    
+    /**
+     * Get reference images.
+     */
+    protected function getReferences(?Project $project): string
+    {
+        if (!$project) return '';
+        
+        $refs = $project->referenceImages()->limit(5)->get(['title', 'tags']);
+        
+        if ($refs->isEmpty()) return '';
+        
+        return "REFERENCE IMAGES:\n" . $refs->map(fn($r) => "- {$r->title} (" . implode(', ', $r->tags ?? []) . ")")->implode("\n");
+    }
+    
+    /**
+     * Build fully contextual prompt.
+     */
+    protected function buildContextualPrompt(string $step, int $index, string $userInput, string $previousOutputs, string $style, string $canon, string $references): string
+    {
+        $prompt = "CONTINUING BUILD STEP {$index}: {$step}\n\n";
+        $prompt .= "ORIGINAL CONCEPT: {$userInput}\n\n";
+        
+        if ($previousOutputs) {
+            $prompt .= "PREVIOUS STEPS COMPLETED:\n{$previousOutputs}\n\n";
+        }
+        
+        if ($canon) {
+            $prompt .= "{$canon}\n\n";
+        }
+        
+        if ($references) {
+            $prompt .= "{$references}\n\n";
+        }
+        
+        $prompt .= "VISUAL STYLE: {$style}\n\n";
+        
+        // Add step-specific instructions that BUILD ON previous content
+        $prompt .= match($step) {
+            'Concept Development' => "EXPAND the concept: Build on any previous steps. Create a clear premise statement.",
+            'Character Design' => "DESIGN characters: Consider the concept and previous steps. Include names, descriptions, motivations, visual traits.",
+            'Environment Building' => "BUILD environment: Match the concept and characters. Describe locations with atmosphere and visual details.",
+            'Key Scene' => "CREATE key scene: Use the characters and setting. Describe with camera angles, lighting, mood.",
+            'Action Sequence' => "PLAN action: Build on previous character abilities and setting. Include movement, stakes.",
+            'Final Output' => "COMPILE final production: Integrate ALL previous steps into a complete summary with image/video/music prompts.",
+            'Concept Breakdown' => "BREAKDOWN concept: Expand the idea thoroughly. Build on any earlier steps.",
+            'Multiple Characters' => "DEFINE multiple characters: Ensure consistency with concept. Names, roles, relationships.",
+            'Multiple Environments' => "DESCRIBE environments: Match the story. Visual details, lighting, mood per location.",
+            'Scene Progression' => "MAP scene progression: Build on characters/environments. Order events logically.",
+            'Cinematic Shots' => "DESCRIBE cinematic shots: Use characters and scenes. Camera angles, movement, lighting.",
+            'Emotional Tone' => "SET emotional tone: Match the story arc. Describe music mood, pacing, atmosphere.",
+            default => "DEVELOP {$step}: Build on previous steps. Be consistent with established content.",
         };
+        
+        return $prompt;
     }
 
     /**
