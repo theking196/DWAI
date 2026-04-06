@@ -906,3 +906,60 @@ Route::get('/lookup/quick', function (Illuminate\Http\Request $request) {
     return response()->json($results);
 })->name('api.lookup.quick');
 
+
+
+# Job status tracking
+Route::get('/jobs/status', function (Illuminate\Http\Request $request) {
+    $type = $request->get('type', 'output');
+    $status = $request->get('status');
+    
+    $query = match($type) {
+        'output' => \App\Models\AIOutput::query(),
+        'reference' => \App\Models\ReferenceImage::query(),
+        default => null,
+    };
+    
+    if (!$query) return response()->json(['error' => 'Invalid type'], 400);
+    
+    if ($status) {
+        $query->where('status', $status);
+    }
+    
+    $jobs = $query->orderBy('created_at', 'desc')
+        ->limit($request->get('limit', 20))
+        ->get()
+        ->map(fn($job) => [
+            'id' => $job->id,
+            'type' => $type,
+            'status' => $job->status ?? $job->getMetadata('processing_status'),
+            'error' => $job->error_message ?? $job->getMetadata('processing_error'),
+            'created_at' => $job->created_at->toISOString(),
+        ]);
+    
+    return response()->json($jobs);
+})->name('api.jobs.status');
+
+Route::get('/jobs/{type}/{id}/status', function (string $type, int $id) {
+    $service = app(\App\Services\JobRetryService::class);
+    return response()->json($service->getJobStatus($type, $id));
+})->name('api.jobs.check');
+
+Route::post('/jobs/{type}/{id}/retry', function (string $type, int $id) {
+    $service = app(\App\Services\JobRetryService::class);
+    $success = $service->retryJob($type, $id);
+    return response()->json(['retry_scheduled' => $success]);
+})->name('api.jobs.retry');
+
+Route::get('/projects/{id}/jobs-summary', function (int $id) {
+    $outputs = \App\Models\AIOutput::whereHas('session', fn($q) => $q->where('project_id', $id))->get();
+    
+    $summary = [
+        'pending' => $outputs->where('status', 'pending')->count(),
+        'processing' => $outputs->where('status', 'processing')->count(),
+        'completed' => $outputs->where('status', 'completed')->count(),
+        'failed' => $outputs->where('status', 'failed')->count(),
+    ];
+    
+    return response()->json($summary);
+})->name('api.jobs.project-summary');
+
