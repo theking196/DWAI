@@ -162,7 +162,7 @@
             </div>
         </div>
         
-        <!-- Right Column: Conflicts + Visual Style -->
+        <!-- Right Column: Conflicts + Visual Style + Assistant -->
         <div class="workspace-panel info-panel">
             <!-- Conflicts -->
             <div class="panel-section">
@@ -198,6 +198,96 @@
                         <p class="muted">Inherits from project</p>
                     </div>
                     <button class="btn btn-secondary btn-sm w-full" id="update-style-btn">Update Style</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Assistant Agent Panel -->
+        <div class="workspace-panel assistant-panel" id="assistant-panel">
+            <div class="panel-header">
+                <h3>🎬 Assistant Agent</h3>
+                <span class="phase-badge" id="phase-badge">{{ $session->assistant_phase ?? 'idea_input' }}</span>
+            </div>
+            <div class="panel-body flex-column">
+                <!-- Phase Indicator -->
+                <div class="phase-indicator" id="phase-indicator">
+                    <div class="phase-step" data-phase="idea_input">1. Idea</div>
+                    <div class="phase-step" data-phase="idea_refinement">2. Refine</div>
+                    <div class="phase-step" data-phase="structure_planning">3. Structure</div>
+                    <div class="phase-step" data-phase="image_prompts">4. Images</div>
+                    <div class="phase-step" data-phase="video_prompts">5. Video</div>
+                    <div class="phase-step" data-phase="music_prompt">6. Music</div>
+                    <div class="phase-step" data-phase="complete">✓ Done</div>
+                </div>
+                
+                <!-- Chat Interface -->
+                <div class="assistant-chat" id="assistant-chat">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="chat-message assistant">
+                            <span class="msg-icon">🎬</span>
+                            <div class="msg-content">Welcome to Assistant Agent! Drop your idea below and I'll help create your visual story.</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Input -->
+                <div class="assistant-input">
+                    <textarea 
+                        id="assistant-input" 
+                        class="form-input"
+                        placeholder="Drop your idea here..."
+                        rows="3"
+                    ></textarea>
+                    <button class="btn btn-primary" id="assistant-send-btn">Send</button>
+                </div>
+                
+                <!-- Outputs -->
+                <div class="assistant-outputs" id="assistant-outputs">
+                    <!-- Structure -->
+                    @if($session->assistant_structure)
+                    <div class="output-section" id="output-structure">
+                        <h4>📋 Structured Breakdown</h4>
+                        <pre>{{ json_encode($session->assistant_structure, JSON_PRETTY_PRINT) }}</pre>
+                    </div>
+                    @endif
+                    
+                    <!-- Image Prompts -->
+                    @if($session->assistant_image_prompts)
+                    <div class="output-section" id="output-images">
+                        <h4>🎨 Image Prompts ({{ count(json_decode($session->assistant_image_prompts, true) ?? []) }})</h4>
+                        <ul class="prompt-list">
+                            @foreach(json_decode($session->assistant_image_prompts, true) ?? [] as $prompt)
+                            <li>{{ $prompt }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    @endif
+                    
+                    <!-- Video Prompts -->
+                    @if($session->assistant_video_prompts)
+                    <div class="output-section" id="output-video">
+                        <h4>🎬 Video Prompts ({{ count(json_decode($session->assistant_video_prompts, true) ?? []) }})</h4>
+                        <ul class="prompt-list">
+                            @foreach(json_decode($session->assistant_video_prompts, true) ?? [] as $prompt)
+                            <li>{{ $prompt }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    @endif
+                    
+                    <!-- Music Prompt -->
+                    @if($session->assistant_music_prompt)
+                    <div class="output-section" id="output-music">
+                        <h4>🎵 Music Prompt</h4>
+                        <p>{{ $session->assistant_music_prompt }}</p>
+                    </div>
+                    @endif
+                </div>
+                
+                <!-- Actions -->
+                <div class="assistant-actions">
+                    <button class="btn btn-success" id="generate-pack-btn">Generate Full Production Pack</button>
+                    <button class="btn btn-secondary" id="save-canon-btn">Save to Canon</button>
                 </div>
             </div>
         </div>
@@ -488,3 +578,325 @@
 }
 </style>
 @endsection
+/* Assistant Agent Panel */
+.assistant-panel {
+    grid-column: span 3;
+}
+
+.phase-indicator {
+    display: flex;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin-bottom: var(--space-md);
+}
+
+.phase-step {
+    font-size: 0.75rem;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    opacity: 0.5;
+}
+
+.phase-step.active {
+    opacity: 1;
+    background: var(--primary);
+    color: white;
+}
+
+.phase-step.completed {
+    opacity: 1;
+    background: var(--success);
+    color: white;
+}
+
+.phase-badge {
+    font-size: 0.75rem;
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+}
+
+.assistant-chat {
+    flex: 1;
+    min-height: 200px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+}
+
+.chat-messages {
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.chat-message {
+    display: flex;
+    gap: var(--space-sm);
+    align-items: flex-start;
+}
+
+.chat-message.user {
+    flex-direction: row-reverse;
+    text-align: right;
+}
+
+.msg-icon {
+    font-size: 1.25rem;
+}
+
+.msg-content {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background: var(--bg-tertiary);
+    max-width: 80%;
+}
+
+.chat-message.user .msg-content {
+    background: var(--primary);
+    color: white;
+}
+
+.chat-message.assistant .msg-content {
+    background: var(--bg-secondary);
+}
+
+.assistant-input {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.assistant-input textarea {
+    flex: 1;
+    resize: none;
+}
+
+.assistant-outputs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.output-section {
+    padding: var(--space-md);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+.output-section h4 {
+    font-size: 0.875rem;
+    margin-bottom: var(--space-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.output-section pre {
+    font-size: 0.75rem;
+    max-height: 100px;
+    overflow: auto;
+    background: var(--bg-primary);
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+}
+
+.prompt-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.75rem;
+}
+
+.prompt-list li {
+    padding: var(--space-xs) 0;
+    border-bottom: 1px solid var(--panel-border);
+}
+
+.assistant-actions {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.assistant-actions .btn {
+    flex: 1;
+}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sessionId = {{ $session->id }};
+    const chatMessages = document.getElementById('chat-messages');
+    const assistantInput = document.getElementById('assistant-input');
+    const sendBtn = document.getElementById('assistant-send-btn');
+    const phaseBadge = document.getElementById('phase-badge');
+    const phaseIndicator = document.getElementById('phase-indicator');
+    
+    // Update phase indicator
+    function updatePhaseIndicator(phase) {
+        phaseBadge.textContent = phase;
+        document.querySelectorAll('.phase-step').forEach(step => {
+            step.classList.remove('active', 'completed');
+            if (step.dataset.phase === phase) {
+                step.classList.add('active');
+            } else {
+                const phases = ['idea_input', 'idea_refinement', 'structure_planning', 'image_prompts', 'video_prompts', 'music_prompt', 'complete'];
+                if (phases.indexOf(step.dataset.phase) < phases.indexOf(phase)) {
+                    step.classList.add('completed');
+                }
+            }
+        });
+    }
+    
+    // Add message to chat
+    function addMessage(content, isUser = false) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `chat-message ${isUser ? 'user' : 'assistant'}`;
+        msgDiv.innerHTML = `
+            <span class="msg-icon">${isUser ? '👤' : '🎬'}</span>
+            <div class="msg-content">${content}</div>
+        `;
+        chatMessages.appendChild(msgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    // Send message to assistant
+    async function sendToAssistant(input) {
+        try {
+            const response = await fetch(`/api/dwai/assistant/${sessionId}/handle`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ input: input })
+            });
+            
+            const data = await response.json();
+            
+            if (data.current_phase) {
+                updatePhaseIndicator(data.current_phase);
+            }
+            
+            if (data.message) {
+                addMessage(data.message, false);
+            }
+            
+            if (data.generated_outputs) {
+                updateOutputs(data.generated_outputs);
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('Assistant error:', error);
+            addMessage('Error connecting to Assistant. Please try again.', false);
+        }
+    }
+    
+    // Update outputs display
+    function updateOutputs(outputs) {
+        const container = document.getElementById('assistant-outputs');
+        let html = '';
+        
+        if (outputs.structure) {
+            html += `<div class="output-section"><h4>📋 Structured Breakdown</h4><pre>${JSON.stringify(outputs.structure, null, 2)}</pre></div>`;
+        }
+        if (outputs.image_prompts && outputs.image_prompts.length) {
+            html += `<div class="output-section"><h4>🎨 Image Prompts (${outputs.image_prompts.length})</h4><ul class="prompt-list">${outputs.image_prompts.map(p => `<li>${p}</li>`).join('')}</ul></div>`;
+        }
+        if (outputs.video_prompts && outputs.video_prompts.length) {
+            html += `<div class="output-section"><h4>🎬 Video Prompts (${outputs.video_prompts.length})</h4><ul class="prompt-list">${outputs.video_prompts.map(p => `<li>${p}</li>`).join('')}</ul></div>`;
+        }
+        if (outputs.music_prompt) {
+            html += `<div class="output-section"><h4>🎵 Music Prompt</h4><p>${outputs.music_prompt}</p></div>`;
+        }
+        
+        if (html) {
+            container.innerHTML = html;
+        }
+    }
+    
+    // Send button click
+    sendBtn.addEventListener('click', async () => {
+        const input = assistantInput.value.trim();
+        if (!input) return;
+        
+        addMessage(input, true);
+        assistantInput.value = '';
+        
+        await sendToAssistant(input);
+    });
+    
+    // Enter key to send
+    assistantInput.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendBtn.click();
+        }
+    });
+    
+    // Generate Full Production Pack
+    document.getElementById('generate-pack-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('generate-pack-btn');
+        btn.disabled = true;
+        btn.textContent = 'Generating...';
+        
+        const phases = ['structure_planning', 'image_prompts', 'video_prompts', 'music_prompt'];
+        
+        for (const phase of phases) {
+            await sendToAssistant('proceed');
+        }
+        
+        btn.disabled = false;
+        btn.textContent = 'Generate Full Production Pack';
+    });
+    
+    // Save to Canon
+    document.getElementById('save-canon-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('save-canon-btn');
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+        
+        try {
+            const stateRes = await fetch(`/api/dwai/assistant/${sessionId}/state`);
+            const state = await stateRes.json();
+            
+            if (state.structure) {
+                const canonRes = await fetch('/api/dwai/canon', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        title: 'Assistant Structure',
+                        type: 'structure',
+                        content: JSON.stringify(state.structure),
+                        importance: 'important'
+                    })
+                });
+                
+                if (canonRes.ok) {
+                    addMessage('✅ Structure saved to Canon!', false);
+                }
+            }
+        } catch (error) {
+            console.error('Save to canon error:', error);
+        }
+        
+        btn.disabled = false;
+        btn.textContent = 'Save to Canon';
+    });
+    
+    // Initialize phase
+    updatePhaseIndicator('{{ $session->assistant_phase ?? "idea_input" }}');
+});
+</script>
