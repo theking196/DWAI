@@ -1,0 +1,20 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - DB_HOST=10.0.0.1
+      - DB_PORT=5432
+      - DB_DATABASE=dwai_studio
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+    volumes:
+      - ./storage:/var/www/storage
+    command: >
+      sh -c "php artisan migrate --force &&
+             php artisan config:cache &&
+             php artisan route:cache &&
+             php artisan view:cache &&
+             php-fpm"

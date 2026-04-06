@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: dwai-studio
+    env: php
+    buildCommand: "composer install --no-dev --optimize-autoloader"
+    startCommand: "php-fpm"
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_KEY
+        generateValue: true
+      - key: DB_HOST
+        fromDatabase:
+          name: dwai-db
+          property: host
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_DATABASE
+        fromDatabase:
+          name: dwai-db
+          value: dwai_studio
+      - key: DB_USERNAME
+        fromDatabase:
+          name: dwai-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: dwai-db
+          property: password
+
+databases:
+  - name: dwai-db
+    databaseName: dwai_studio
+    plan: free
