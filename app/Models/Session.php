@@ -26,9 +26,16 @@ class Session extends Model
         'assistant_structure' => 'array',
         'assistant_image_prompts' => 'array',
         'assistant_video_prompts' => 'array',
+        'build_steps' => 'array',
+        'build_outputs' => 'array',
+        'current_step_index' => 'integer',
         'context_updated_at' => 'datetime',
         'archived_at' => 'datetime',
         'activity_history' => 'array',
+    ];
+
+    protected $attributes = [
+        'session_type' => 'normal',
     ];
 
     // Relationships
