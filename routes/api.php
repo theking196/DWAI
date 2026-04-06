@@ -1383,3 +1383,31 @@ Route::prefix('dwai/import-export')->group(function () {
     Route::post('/backup/trigger', [App\Http\Controllers\DWAI\ImportExportController::class, 'triggerBackup']);
 });
 
+
+
+# Unified data endpoints
+Route::get('/dwai/unified/project/{id}', function (int $id) {
+    $service = app(\App\Services\DWAI\UnifiedDataService::class);
+    return response()->json($service->getProjectData($id));
+})->name('api.unified.project');
+
+Route::get('/dwai/unified/session/{id}', function (int $id) {
+    $service = app(\App\Services\DWAI\UnifiedDataService::class);
+    return response()->json($service->getSessionData($id));
+})->name('api.unified.session');
+
+Route::get('/dwai/unified/ai-context/{sessionId}', function (int $sessionId) {
+    $service = app(\App\Services\DWAI\UnifiedDataService::class);
+    return response()->json($service->getAIContext($sessionId));
+})->name('api.unified.ai-context');
+
+Route::get('/dwai/unified/dashboard', function () {
+    $service = app(\App\Services\DWAI\UnifiedDataService::class);
+    return response()->json($service->getDashboardData(auth()->id()));
+})->name('api.unified.dashboard');
+
+Route::get('/dwai/unified/search', function (Illuminate\Http\Request $request) {
+    $service = app(\App\Services\DWAI\UnifiedSearchService::class);
+    return response()->json($service->search($request->q, auth()->id(), $request->all()));
+})->name('api.unified.search');
+
