@@ -70,4 +70,3 @@ class TimelineEvent extends Model
         ];
     }
 }
-}
