@@ -9,8 +9,7 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     zip \
     unzip \
-    libpq-dev \
-    npm
+    libpq-dev
 
 # Clear cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -27,17 +26,19 @@ WORKDIR /var/www
 # Copy application
 COPY . .
 
-# Install PHP dependencies (allow missing dev packages)
-RUN composer install --no-dev --ignore-platform-reqs --optimize-autoloader || \
-    composer install --ignore-platform-reqs --optimize-autoloader
-
-# Build frontend (if needed)
-RUN npm install 2>/dev/null || true
+# Create required directories
+RUN mkdir -p bootstrap/cache \
+    && mkdir -p storage/framework/cache \
+    && mkdir -p storage/framework/sessions \
+    && mkdir -p storage/framework/views \
+    && mkdir -p storage/logs \
+    && chmod -R 775 bootstrap/cache storage
 
 # Set permissions
-RUN chown -R www-data:www-data /var/www \
-    && chmod -R 755 /var/www/storage \
-    && chmod -R 755 /var/www/bootstrap/cache
+RUN chown -R www-data:www-data /var/www
+
+# Install dependencies
+RUN composer install --ignore-platform-reqs --optimize-autoloader
 
 # Expose port
 EXPOSE 9000
