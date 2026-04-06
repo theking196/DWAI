@@ -131,7 +131,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const refData = await refRes.json();
                 if (refData.success && refData.references) {
                     formData.append('references', JSON.stringify(refData.references.map(r => r.path)));
-                }
             } catch(e) { console.log('No refs', e); }
             }
         }
