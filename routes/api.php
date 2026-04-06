@@ -963,3 +963,17 @@ Route::get('/projects/{id}/jobs-summary', function (int $id) {
     return response()->json($summary);
 })->name('api.jobs.project-summary');
 
+
+
+# Activity log
+Route::get('/activity', function (Illuminate\Http\Request $request) {
+    $limit = $request->get('limit', 20);
+    $activities = \App\Models\ActivityLog::recent(auth()->id(), $limit);
+    return response()->json($activities->map(fn($a) => $a->getSummary()));
+})->name('api.activity.recent');
+
+Route::get('/projects/{id}/activity', function (int $id) {
+    $activities = \App\Models\ActivityLog::forProject($id);
+    return response()->json($activities->map(fn($a) => $a->getSummary()));
+})->name('api.activity.project');
+
