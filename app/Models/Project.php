@@ -281,6 +281,4 @@ class Project extends Model
     {
         $tags = $this->tags ?? [];
         $this->update(['tags' => array_filter($tags, fn($t) => $t !== $tag)]);
-    }
-}
 }
