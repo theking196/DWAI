@@ -977,3 +977,86 @@ Route::get('/projects/{id}/activity', function (int $id) {
     return response()->json($activities->map(fn($a) => $a->getSummary()));
 })->name('api.activity.project');
 
+
+
+# Activity history views
+Route::get('/projects/{id}/history', function (Illuminate\Http\Request $request, int $id) {
+    $limit = $request->get('limit', 50);
+    $type = $request->get('type'); // filter by event_type
+    
+    $query = \App\Models\ActivityLog::where('project_id', $id)
+        ->orderBy('created_at', 'desc');
+    
+    if ($type) {
+        $query->where('event_type', $type);
+    }
+    
+    $activities = $query->limit($limit)->get()
+        ->map(fn($a) => [
+            'id' => $a->id,
+            'who' => $a->user_id,
+            'when' => $a->created_at->toISOString(),
+            'event' => $a->event_type,
+            'description' => $a->description,
+            'entity' => $a->entity_type ? ['type' => $a->entity_type, 'id' => $a->entity_id] : null,
+        ]);
+    
+    return response()->json([
+        'project_id' => $id,
+        'activities' => $activities,
+        'count' => $activities->count(),
+    ]);
+})->name('api.projects.history');
+
+Route::get('/sessions/{id}/history', function (Illuminate\Http\Request $request, int $id) {
+    $session = \App\Models\Session::findOrFail($id);
+    if ($session->user_id !== auth()->id()) return response()->json(['error' => 'Unauthorized'], 403);
+    
+    $limit = $request->get('limit', 50);
+    
+    $activities = \App\Models\ActivityLog::where('entity_type', 'session')
+        ->where('entity_id', $id)
+        ->orderBy('created_at', 'desc')
+        ->limit($limit)
+        ->get()
+        ->map(fn($a) => [
+            'id' => $a->id,
+            'when' => $a->created_at->toISOString(),
+            'event' => $a->event_type,
+            'description' => $a->description,
+        ]);
+    
+    // Also get related outputs
+    $outputs = \App\Models\AIOutput::where('session_id', $id)
+        ->orderBy('created_at', 'desc')
+        ->limit(10)
+        ->get()
+        ->map(fn($o) => [
+            'type' => 'output',
+            'when' => $o->created_at->toISOString(),
+            'event' => 'output.generated',
+            'description' => "Generated {->type}",
+            'status' => $o->status,
+        ]);
+    
+    return response()->json([
+        'session_id' => $id,
+        'activities' => $activities,
+        'recent_outputs' => $outputs,
+    ]);
+})->name('api.sessions.history');
+
+Route::get('/projects/{id}/history/summary', function (int $id) {
+    $logs = \App\Models\ActivityLog::where('project_id', $id)->get();
+    
+    $byType = $logs->groupBy('event_type')
+        ->map(fn($g) => $g->count());
+    
+    return response()->json([
+        'total' => $logs->count(),
+        'by_type' => $byType,
+        'first_activity' => $logs->min('created_at'),
+        'last_activity' => $logs->max('created_at'),
+    ]);
+})->name('api.projects.history-summary');
+
