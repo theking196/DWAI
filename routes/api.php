@@ -1185,3 +1185,23 @@ Route::post('/settings/behavior/promotion', function (Illuminate\Http\Request $r
     return response()->json(\App\Models\Setting::getPromotionConfig());
 })->name('api.settings.promotion');
 
+
+
+# Backup
+Route::post('/backup', function () {
+    $service = app(\App\Services\BackupService::class);
+    $backup = $service->createBackup(auth()->id());
+    return response()->json($backup);
+})->name('api.backup.create');
+
+Route::get('/backup/list', function () {
+    $service = app(\App\Services\BackupService::class);
+    return response()->json($service->listBackups());
+})->name('api.backup.list');
+
+Route::post('/backup/restore', function (Illuminate\Http\Request $request) {
+    $service = app(\App\Services\BackupService::class);
+    $success = $service->restoreBackup($request->filename);
+    return response()->json(['restored' => $success]);
+})->name('api.backup.restore');
+
