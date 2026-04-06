@@ -1060,3 +1060,16 @@ Route::get('/projects/{id}/history/summary', function (int $id) {
     ]);
 })->name('api.projects.history-summary');
 
+
+
+# Change history
+Route::get('/history/{type}/{id}', function (string $type, int $id) {
+    $history = \App\Models\ChangeHistory::forEntity($type, $id);
+    return response()->json($history->map(fn($h) => $h->getDiff()));
+})->name('api.history.entity');
+
+Route::get('/history/{type}/{id}/{field}', function (string $type, int $id, string $field) {
+    $history = \App\Models\ChangeHistory::fieldHistory($type, $id, $field);
+    return response()->json($history->map(fn($h) => $h->getDiff()));
+})->name('api.history.field');
+
