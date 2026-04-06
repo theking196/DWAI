@@ -125,14 +125,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(form);
             formData.append('async', 'true');
             
-                        if (type === 'image' && window.projectId) {
-            try {
-                const refRes = await fetch(`/projects/${window.projectId}/references`);
-                const refData = await refRes.json();
-                if (refData.success && refData.references) {
-                    formData.append('references', JSON.stringify(refData.references.map(r => r.path)));
-        }
-        const response = await fetch(endpoint, {
+            if (type === 'image' && window.projectId) {
+                try {
+                    const refRes = await fetch(`/projects/${window.projectId}/references`);
+                    const refData = await refRes.json();
+                    if (refData.success && refData.references) {
+                        formData.append('references', JSON.stringify(refData.references.map(r => r.path)));
+                    }
+                } catch(e) { console.log('No refs', e); }
+            }
+            
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 body: formData,
                 headers: {
