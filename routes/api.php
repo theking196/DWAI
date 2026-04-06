@@ -1343,3 +1343,43 @@ Route::post('/sessions/{id}/import/file', function (Illuminate\Http\Request $req
     return response()->json($result);
 })->name('api.sessions.import-file');
 
+
+
+# DWAI Controllers
+Route::get('/dwai/dashboard', [App\Http\Controllers\DWAI\DashboardController::class, 'index']);
+Route::get('/dwai/stats', [App\Http\Controllers\DWAI\DashboardController::class, 'stats']);
+
+Route::resource('dwai/projects', App\Http\Controllers\DWAI\ProjectController::class)->except(['create', 'edit']);
+Route::resource('dwai/sessions', App\Http\Controllers\DWAI\SessionController::class)->except(['create', 'edit']);
+Route::resource('dwai/canon', App\Http\Controllers\DWAI\CanonController::class)->except(['create', 'edit']);
+Route::resource('dwai/references', App\Http\Controllers\DWAI\ReferenceController::class)->except(['create', 'edit']);
+
+Route::post('/dwai/ai/generate-text/{session}', [App\Http\Controllers\DWAI\AIController::class, 'generateText']);
+Route::post('/dwai/ai/generate-image/{session}', [App\Http\Controllers\DWAI\AIController::class, 'generateImage']);
+Route::get('/dwai/ai/outputs/{session}', [App\Http\Controllers\DWAI\AIController::class, 'outputs']);
+
+Route::get('/dwai/conflicts/{project}', [App\Http\Controllers\DWAI\ConflictController::class, 'index']);
+Route::post('/dwai/conflicts/{id}/resolve', [App\Http\Controllers\DWAI\ConflictController::class, 'resolve']);
+Route::post('/dwai/conflicts/{id}/ignore', [App\Http\Controllers\DWAI\ConflictController::class, 'ignore']);
+Route::post('/dwai/conflicts/{project}/scan', [App\Http\Controllers\DWAI\ConflictController::class, 'scan']);
+
+Route::get('/dwai/settings', [App\Http\Controllers\DWAI\SettingsController::class, 'index']);
+Route::get('/dwai/settings/{key}', [App\Http\Controllers\DWAI\SettingsController::class, 'get']);
+Route::post('/dwai/settings/{key}', [App\Http\Controllers\DWAI\SettingsController::class, 'set']);
+Route::delete('/dwai/settings/{key}', [App\Http\Controllers\DWAI\SettingsController::class, 'delete']);
+Route::get('/dwai/settings/ai/config', [App\Http\Controllers\DWAI\SettingsController::class, 'aiConfig']);
+Route::get('/dwai/settings/behavior', [App\Http\Controllers\DWAI\SettingsController::class, 'behavior']);
+
+Route::prefix('dwai/import-export')->group(function () {
+    Route::post('/backup', [App\Http\Controllers\DWAI\ImportExportController::class, 'createBackup']);
+    Route::get('/backups', [App\Http\Controllers\DWAI\ImportExportController::class, 'listBackups']);
+    Route::post('/restore', [App\Http\Controllers\DWAI\ImportExportController::class, 'restoreBackup']);
+    Route::post('/export/project/{id}', [App\Http\Controllers\DWAI\ImportExportController::class, 'exportProject']);
+    Route::post('/export/session/{id}', [App\Http\Controllers\DWAI\ImportExportController::class, 'exportSession']);
+    Route::post('/import/project', [App\Http\Controllers\DWAI\ImportExportController::class, 'importProject']);
+    Route::post('/import/session/{id}', [App\Http\Controllers\DWAI\ImportExportController::class, 'importToSession']);
+    Route::get('/schedule', [App\Http\Controllers\DWAI\ImportExportController::class, 'getSchedule']);
+    Route::post('/schedule', [App\Http\Controllers\DWAI\ImportExportController::class, 'configureSchedule']);
+    Route::post('/backup/trigger', [App\Http\Controllers\DWAI\ImportExportController::class, 'triggerBackup']);
+});
+
