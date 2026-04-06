@@ -291,6 +291,72 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Progressive Build Panel -->
+        @if($session->session_type === 'progressive')
+        <div class="workspace-panel progressive-panel" id="progressive-panel">
+            <div class="panel-header">
+                <h3>🔄 Progressive Build</h3>
+                <span class="progress-badge" id="progress-badge">{{ $session->current_step_index ?? 0 }}/{{ count($session->build_steps ?? []) }}</span>
+            </div>
+            <div class="panel-body flex-column">
+                <!-- Step List -->
+                <div class="step-list" id="step-list">
+                    @foreach($session->build_steps ?? [] as $index => $step)
+                    <div class="step-item {{ $index == ($session->current_step_index ?? 0) ? 'active' : '' }} {{ ($step['status'] ?? 'pending') === 'completed' ? 'completed' : '' }}" data-index="{{ $index }}">
+                        <span class="step-number">{{ $index + 1 }}</span>
+                        <span class="step-name">{{ is_array($step) ? ($step['name'] ?? $step) : $step }}</span>
+                        <span class="step-status">{{ $step['status'] ?? 'pending' }}</span>
+                    </div>
+                    @endforeach
+                </div>
+                
+                <!-- Current Step Output -->
+                <div class="step-output" id="step-output">
+                    <h4 id="current-step-name">Current Step</h4>
+                    <div class="output-content" id="progressive-output">
+                        {{ $session->build_outputs[array_keys($session->build_steps ?? [])[$session->current_step_index ?? 0] ?? ''] ?? 'Enter your idea and click Next Step to begin.' }}
+                    </div>
+                </div>
+                
+                <!-- Feedback Input -->
+                <div class="progressive-input">
+                    <textarea id="progressive-feedback" class="form-input" placeholder="Add feedback to refine this step..." rows="2"></textarea>
+                    <div class="progressive-buttons">
+                        <button class="btn btn-primary" id="next-step-btn">Next Step →</button>
+                        <button class="btn btn-secondary" id="refine-step-btn">Refine</button>
+                        <button class="btn btn-ghost" id="skip-step-btn">Skip</button>
+                    </div>
+                </div>
+                
+                <!-- Final Outputs (shown after completion) -->
+                @if(($session->current_step_index ?? 0) >= count($session->build_steps ?? []))
+                <div class="final-outputs" id="final-outputs">
+                    <div class="output-section">
+                        <h4>🎨 Image Prompts</h4>
+                        <ul class="prompt-list">
+                            @foreach($session->assistant_image_prompts ?? [] as $prompt)
+                            <li>{{ $prompt }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    <div class="output-section">
+                        <h4>🎬 Video Prompts</h4>
+                        <ul class="prompt-list">
+                            @foreach($session->assistant_video_prompts ?? [] as $prompt)
+                            <li>{{ $prompt }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    <div class="output-section">
+                        <h4>🎵 Music Prompt</h4>
+                        <p>{{ $session->assistant_music_prompt ?? 'No music prompt generated' }}</p>
+                    </div>
+                </div>
+                @endif
+            </div>
+        </div>
+        @endif
     </div>
 </div>
 
@@ -900,3 +966,196 @@ document.addEventListener('DOMContentLoaded', function() {
     updatePhaseIndicator('{{ $session->assistant_phase ?? "idea_input" }}');
 });
 </script>
+
+/* Progressive Build Panel */
+.progressive-panel {
+    grid-column: span 3;
+}
+
+.progress-badge {
+    font-size: 0.875rem;
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--primary);
+    color: white;
+    border-radius: var(--radius-sm);
+}
+
+.step-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-md);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.step-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+}
+
+.step-item.active {
+    background: var(--primary);
+    color: white;
+}
+
+.step-item.completed {
+    background: var(--success);
+    color: white;
+}
+
+.step-number {
+    font-weight: bold;
+    width: 24px;
+    text-align: center;
+}
+
+.step-name {
+    flex: 1;
+}
+
+.step-status {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.step-output {
+    margin-bottom: var(--space-md);
+}
+
+.step-output h4 {
+    font-size: 0.875rem;
+    margin-bottom: var(--space-sm);
+}
+
+.output-content {
+    padding: var(--space-md);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    min-height: 100px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 0.875rem;
+}
+
+.progressive-input {
+    margin-bottom: var(--space-md);
+}
+
+.progressive-buttons {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+}
+
+.progressive-buttons .btn {
+    flex: 1;
+}
+
+.final-outputs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--panel-border);
+}
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const sessionId = {{ $session->id }};
+    const isProgressive = {{ $session->session_type === "progressive" ? "true" : "false" }};
+    
+    if (!isProgressive) return;
+    
+    const stepList = document.getElementById("step-list");
+    const stepOutput = document.getElementById("progressive-output");
+    const currentStepName = document.getElementById("current-step-name");
+    const progressBadge = document.getElementById("progress-badge");
+    const nextBtn = document.getElementById("next-step-btn");
+    const refineBtn = document.getElementById("refine-step-btn");
+    const skipBtn = document.getElementById("skip-step-btn");
+    const feedbackInput = document.getElementById("progressive-feedback");
+    
+    async function updateProgressiveState() {
+        try {
+            const res = await fetch(`/api/dwai/progressive/${sessionId}/state`);
+            const data = await res.json();
+            
+            if (data.error) {
+                console.error(data.error);
+                return;
+            }
+            
+            // Update progress badge
+            progressBadge.textContent = `${data.current_step_index + 1}/${data.total_steps}`;
+            
+            // Update step list
+            if (stepList && data.steps) {
+                stepList.innerHTML = data.steps.map((step, i) => {
+                    let cls = "step-item";
+                    if (i === data.current_step_index) cls += " active";
+                    else if (step.status === "completed") cls += " completed";
+                    return `<div class="${cls}" data-index="${i}">
+                        <span class="step-number">${i + 1}</span>
+                        <span class="step-name">${step.name}</span>
+                        <span class="step-status">${step.status}</span>
+                    </div>`;
+                }).join("");
+            }
+            
+            // Update current step name and output
+            if (currentStepName) currentStepName.textContent = data.current_step || "Current Step";
+            if (stepOutput) stepOutput.textContent = data.current_output || "No output yet";
+            
+        } catch (err) {
+            console.error("Failed to update progressive state:", err);
+        }
+    }
+    
+    async function sendAction(action, feedback = "") {
+        try {
+            const res = await fetch(`/api/dwai/progressive/${sessionId}/handle`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": "{{ csrf_token() }}" },
+                body: JSON.stringify({ action: action, feedback: feedback, input: "" })
+            });
+            
+            const data = await res.json();
+            await updateProgressiveState();
+            
+            if (data.is_complete) {
+                stepOutput.textContent = "All steps complete! Generating final outputs...";
+            }
+            
+        } catch (err) {
+            console.error("Action failed:", err);
+        }
+    }
+    
+    if (nextBtn) {
+        nextBtn.addEventListener("click", () => sendAction("next"));
+    }
+    
+    if (refineBtn) {
+        refineBtn.addEventListener("click", () => {
+            const feedback = feedbackInput.value.trim();
+            if (feedback) sendAction("refine", feedback);
+        });
+    }
+    
+    if (skipBtn) {
+        skipBtn.addEventListener("click", () => sendAction("next"));
+    }
+    
+    // Initialize
+    updateProgressiveState();
+});
+</script>
+

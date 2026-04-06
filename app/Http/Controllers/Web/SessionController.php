@@ -61,7 +61,11 @@ class SessionController extends WebController
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'type' => 'required|string|in:brainstorm,script,storyboard,edit',
+            'session_type' => 'nullable|string|in:normal,assistant,progressive',
         ]);
+
+        // Set default session_type
+        $validated['session_type'] = $validated['session_type'] ?? 'normal';
 
         // Verify project ownership
         $project = Project::findOrFail($validated['project_id']);
