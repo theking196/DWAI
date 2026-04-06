@@ -1109,3 +1109,24 @@ Route::get('/settings/generation', function () {
     return response()->json(\App\Models\Setting::getGenerationDefaults());
 })->name('api.settings.generation');
 
+
+
+# Security / Local mode
+Route::get('/settings/security', function () {
+    return response()->json(\App\Models\Setting::getSecurityConfig());
+})->name('api.settings.security');
+
+Route::post('/settings/enforce-local', function () {
+    \App\Models\Setting::enforceLocalMode();
+    return response()->json(['local_mode_enforced' => true]);
+})->name('api.settings.enforce-local');
+
+Route::get('/settings/status', function () {
+    return response()->json([
+        'name' => \App\Models\Setting::get('app.name', 'DWAI Studio'),
+        'local_mode' => \App\Models\Setting::isLocalMode(),
+        'version' => '1.0.0',
+        'private' => true,
+    ]);
+})->name('api.settings.status');
+

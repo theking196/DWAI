@@ -141,3 +141,52 @@ class Setting extends Model
             'storyboard_frames' => self::getInt('generation.storyboard_frames', 4),
         ];
     }
+
+    // ============================================================
+    // Local-Only Configuration
+    // ============================================================
+
+    /**
+     * Ensure local-only mode is enforced.
+     */
+    public static function enforceLocalMode(): void
+    {
+        // Always ensure local mode is on for private studio
+        self::set('app.local_mode', true, 'boolean');
+        self::set('app.public_access', false, 'boolean');
+        
+        // Disable any cloud features by default
+        self::set('features.cloud_sync', false, 'boolean');
+        self::set('features.share_link', false, 'boolean');
+    }
+
+    /**
+     * Check if running in local-only mode.
+     */
+    public static function isLocalMode(): bool
+    {
+        return self::getBool('app.local_mode', true);
+    }
+
+    /**
+     * Check if public access is enabled (should be false).
+     */
+    public static function isPublicAccessEnabled(): bool
+    {
+        return self::getBool('app.public_access', false);
+    }
+
+    /**
+     * Get security config for local-only.
+     */
+    public static function getSecurityConfig(): array
+    {
+        return [
+            'local_mode' => self::isLocalMode(),
+            'public_access' => self::isPublicAccessEnabled(),
+            'cloud_sync' => self::getBool('features.cloud_sync', false),
+            'share_links' => self::getBool('features.share_link', false),
+            'api_auth_required' => true,
+            'session_timeout_minutes' => self::getInt('security.session_timeout', 480),
+        ];
+    }
