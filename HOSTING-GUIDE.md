@@ -1,84 +1,76 @@
-# Free Laravel Hosting Platforms
+# Free Laravel Hosting Platforms - Extended List
 
-## Top Recommendations
+## Traditional Free Web Hosting
+
+| Platform | Free Tier | PHP Version | MySQL | Notes |
+|----------|-----------|-------------|-------|-------|
+| **000webhost** | ✅ Yes | PHP 7.4-8.1 | ✅ | Popular free host, has Laravel support |
+| **InfinityFree** | ✅ Yes | PHP 8.0 | ✅ | Unlimited bandwidth, no ads |
+| **FreeHostingNoAds** | ✅ Yes | PHP 8.1 | ✅ | No ads, Laravel ready |
+| **Byet.host** | ✅ Yes | PHP 8.x | ✅ | Large free hosting network |
+| **X10Hosting** | ✅ Yes | PHP 8.x | ✅ | Community supported |
+
+## Platform-as-a-Service (PaaS)
 
 | Platform | Free Tier | Database | Notes |
 |----------|-----------|----------|-------|
-| **Render** | ✅ Yes | PostgreSQL | Best for Laravel, Docker support |
-| **Fly.io** | ✅ 3 VMs | PostgreSQL | Global edge deployment |
-| **Railway** | ✅ $5 credit/mo | PostgreSQL | Easiest setup |
-| **PocketHost** | ✅ Yes | SQLite | Quickest deployment |
-| **Cyclic** | ✅ Yes | No DB | Serverless |
-| **StormKit** | ✅ Yes | PostgreSQL | Git integration |
+| **Render** | ✅ Yes | PostgreSQL | Best overall |
+| **Fly.io** | ✅ 3 VMs | PostgreSQL | Edge deployment |
+| **Railway** | ✅ $5/mo | PostgreSQL | Easy setup |
+| **Cyclic** | ✅ Yes | External | Serverless |
+| **StormKit** | ✅ Yes | PostgreSQL | Git deploy |
+| **Koyeb** | ✅ Yes | PostgreSQL | EU/US |
+| **Deta** | ✅ Yes | Deta Base | Free tier |
 
-## Platform Details
+## Free VPS (Always Free)
 
-### 1. Render.com ⭐
-- **URL**: render.com
-- **Free**: Web service + PostgreSQL
-- **Specs**: 750 hours/month, 512MB RAM
-- **Pros**: Docker support, managed PostgreSQL, easy scaling
-- **Cons**: Sleeps after 15 min inactivity (free tier)
+| Platform | Free Tier | Resources | Notes |
+|----------|-----------|-----------|-------|
+| **Oracle Cloud** | ✅ Always | 2 VMs, ARM | Best for self-hosting |
+| **Google Cloud** | ✅ 90 days | $300 credit | Large |
+| **AWS** | ✅ 1 year | 750 hours | EC2 t2.micro |
+| **Azure** | ✅ 12 months | $200 credit | MS ecosystem |
 
-### 2. Fly.io
-- **URL**: fly.io
-- **Free**: 3 shared VMs, 160GB bandwidth
-- **Pros**: Edge deployment, Postgres included
-- **Cons**: More complex setup
+## Specialty Free Hosts
 
-### 3. Railway
-- **URL**: railway.app
-- **Free**: $5 credit/month
-- **Pros**: One-click Laravel, easy UI
-- **Cons**: Credit-based (not truly free)
+| Platform | Type | Notes |
+|----------|------|-------|
+| **PocketHost** | PaaS | SQLite, instant deploy |
+| **Netlify** | Edge | Serverless functions |
+| **Vercel** | Edge | Edge functions |
+| **Cloudflare Pages** | Static + Workers | Workers for PHP |
+| **PHPNode** | Free hosting | PHP focused |
 
-### 4. PocketHost
-- **URL**: pocethost.io
-- **Free**: Yes, with limits
-- **Pros**: Instant deployment, SQLite
-- **Cons**: Limited resources
+## Free Database Only
 
-### 5. Cyclic
-- **URL**: cyclic.sh
-- **Free**: Yes
-- **Pros**: Serverless, auto-deploy from GitHub
-- **Cons**: No persistent database (use external)
-
-### 6. StormKit
-- **URL**: stormkit.io
-- **Free**: Yes
-- **Pros**: EU/US deployment, Git integration
-- **Cons**: Smaller free tier
-
-## Alternative: Vercel-style (Edge)
-- **Vercel** - Can host PHP via edge functions (limited)
-- **Netlify** - Same, use _functions folder
-
-## Self-Hosted Options (Free VPS)
-- **Oracle Cloud** - Always free: 2 VMs, ARM
-- **Google Cloud** - $300 credit, 90 days
-- **AWS** - Free tier for 1 year
+| Service | Free Tier | Notes |
+|---------|-----------|-------|
+| **Neon** | ✅ PostgreSQL | Serverless Postgres |
+| **Supabase** | ✅ PostgreSQL | Open source Firebase |
+| **PlanetScale** | ✅ MySQL | Serverless MySQL |
+| **CockroachDB** | ✅ Free tier | Distributed SQL |
 
 ---
 
-## Quick Deploy Comparison
+## My Top Picks for Laravel
 
-| Platform | Difficulty | Speed | Best For |
-|----------|------------|-------|----------|
-| PocketHost | ⭐ Easy | ⚡ Fast | Quick tests |
-| Railway | ⭐ Easy | ⚡ Fast | Prototyping |
-| Render | ⭐⭐ Medium | ⚡ Fast | Production |
-| Fly.io | ⭐⭐⭐ Hard | 🐢 Slow | Scale |
+### 1. For Quick Testing
+- **PocketHost** - Instant, no config
+- **000webhost** - Traditional, cPanel
+
+### 2. For Production (Free)
+- **Oracle Cloud** - Full control, never expires
+- **Render** - Best managed, sleeps on free tier
+
+### 3. For Scale
+- **Railway** - Pay as you go after $5
+- **Fly.io** - Global edge
 
 ---
 
-## Recommended: Render
+## Recommended: Render + Neon
 
-1. Fork repo → GitHub
-2. render.com → New Web Service
-3. Connect GitHub
-4. Add PostgreSQL
-5. Set env vars
-6. Deploy!
+1. **Frontend**: render.com (free web service)
+2. **Database**: neon.tech (free PostgreSQL)
 
-See `render.yaml` in repo for one-click config.
+Both have free tiers that work well for Laravel apps.
