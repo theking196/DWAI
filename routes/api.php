@@ -428,13 +428,6 @@ Route::post('/canon/{id}/versions/{version}/restore', function (int $id, int $ve
 
 
 # Add relationships for embeddings count
-# In CanonEntry model, add:
-public function embeddings() {
-    return $this->morphMany(\App\Models\Embedding::class, 'entity', 'entity_type', 'entity_id');
-}
-
-# Add to routes:
-Route::post('/embeddings/generate/project/{project}', function (int $project) {
     $gen = app(\App\Services\AI\EmbeddingGenerator::class);
     $result = $gen->generateForProject($project);
     return response()->json($result);
