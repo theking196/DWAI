@@ -1,4 +1,4 @@
-FROM php:8.2-cli
+FROM php:8.2-fpm
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -33,14 +33,11 @@ RUN mkdir -p bootstrap/cache \
     && chmod 777 bootstrap/cache \
     && chmod -R 777 storage
 
-# Create nginx config
-RUN echo 'server { listen 8080; root /var/www/public; index index.php; location / { try_files $uri $uri/ /index.php?$query_string; } location ~ \.php$ { fastcgi_pass 127.0.0.1:9000; fastcgi_index index.php; fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; include fastcgi_params; } }' > /etc/nginx/sites-available/default
-
 # Install dependencies
 RUN composer install --ignore-platform-reqs --no-scripts --no-dev
 
 # Expose port 8080
 EXPOSE 8080
 
-# Start nginx and php-fpm
-CMD service php8.2-fpm start && nginx -g 'daemon off;'
+# Start PHP-FPM in foreground
+CMD ["php-fpm"]
