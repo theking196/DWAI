@@ -1073,3 +1073,39 @@ Route::get('/history/{type}/{id}/{field}', function (string $type, int $id, stri
     return response()->json($history->map(fn($h) => $h->getDiff()));
 })->name('api.history.field');
 
+
+
+# Settings
+Route::get('/settings', function () {
+    return response()->json(\App\Models\Setting::all());
+})->name('api.settings.all');
+
+Route::get('/settings/{key}', function (string $key) {
+    $value = \App\Models\Setting::get($key);
+    return $value !== null ? response()->json(['key' => $key, 'value' => $value]) : response()->json(['error' => 'Not found'], 404);
+})->name('api.settings.get');
+
+Route::post('/settings/{key}', function (Illuminate\Http\Request $request, string $key) {
+    $request->validate(['value' => 'required', 'type' => 'nullable|string']);
+    \App\Models\Setting::set($key, $request->value, $request->type ?? 'string');
+    return response()->json(['success' => true]);
+})->name('api.settings.set');
+
+Route::delete('/settings/{key}', function (string $key) {
+    \App\Models\Setting::forget($key);
+    return response()->json(['success' => true]);
+})->name('api.settings.delete');
+
+Route::post('/settings/init', function () {
+    \App\Models\Setting::initDefaults();
+    return response()->json(['initialized' => true]);
+})->name('api.settings.init');
+
+Route::get('/settings/ai/config', function () {
+    return response()->json(\App\Models\Setting::getAIConfig());
+})->name('api.settings.ai');
+
+Route::get('/settings/generation', function () {
+    return response()->json(\App\Models\Setting::getGenerationDefaults());
+})->name('api.settings.generation');
+
