@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\CanonCandidate;
 
 namespace App\Models;
 
