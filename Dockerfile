@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo mbstring exif pcntl bcmath gd
+RUN docker-php-ext-install pdo pgsql mbstring exif pcntl bcmath gd
 
 # Get Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -35,14 +35,11 @@ RUN mkdir -p bootstrap/cache \
     && chmod 777 bootstrap/cache \
     && chmod -R 777 storage
 
-# Install dependencies (generates autoload without scripts)
-RUN composer install --ignore-platform-reqs --no-scripts --no-dev
-
-# Generate Laravel key if not set
-RUN php artisan key:generate --force || true
-
 # Set permissions
 RUN chown -R www-data:www-data /var/www
+
+# Install dependencies
+RUN composer install --ignore-platform-reqs --no-scripts --no-dev
 
 # Expose port
 EXPOSE 9000
