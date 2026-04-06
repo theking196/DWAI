@@ -878,3 +878,31 @@ Route::post('/search/index/{type}/{id}', function (Illuminate\Http\Request $requ
     }
 })->name('api.search.index');
 
+
+
+# Quick lookups
+Route::get('/lookup/project', function (Illuminate\Http\Request $request) {
+    $project = app(\App\Services\LookupService::class)->findProject($request->name, auth()->id());
+    return $project ? response()->json(['id' => $project->id, 'name' => $project->name]) : response()->json(['error' => 'Not found'], 404);
+})->name('api.lookup.project');
+
+Route::get('/lookup/canon', function (Illuminate\Http\Request $request) {
+    $canon = app(\App\Services\LookupService::class)->findCanon($request->title, $request->project, auth()->id());
+    return $canon ? response()->json(['id' => $canon->id, 'title' => $canon->title, 'type' => $canon->type]) : response()->json(['error' => 'Not found'], 404);
+})->name('api.lookup.canon');
+
+Route::get('/lookup/references/by-tag', function (Illuminate\Http\Request $request) {
+    $refs = app(\App\Services\LookupService::class)->findReferencesByTag($request->tag, $request->project);
+    return response()->json($refs);
+})->name('api.lookup.references.tag');
+
+Route::get('/lookup/sessions/by-project', function (Illuminate\Http\Request $request) {
+    $sessions = app(\App\Services\LookupService::class)->findSessionsByProject($request->project, $request->status);
+    return response()->json($sessions);
+})->name('api.lookup.sessions.project');
+
+Route::get('/lookup/quick', function (Illuminate\Http\Request $request) {
+    $results = app(\App\Services\LookupService::class)->quickLookup($request->q, auth()->id());
+    return response()->json($results);
+})->name('api.lookup.quick');
+
