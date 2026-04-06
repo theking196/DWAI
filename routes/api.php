@@ -1213,3 +1213,23 @@ Route::post('/backup/preview', function (Illuminate\Http\Request $request) {
     return response()->json($preview);
 })->name('api.backup.preview');
 
+
+
+# Project/Session export
+Route::post('/projects/{id}/export', function (int $id) {
+    $service = app(\App\Services\ExportService::class);
+    $export = $service->exportProject($id);
+    return response()->json($export);
+})->name('api.projects.export');
+
+Route::post('/sessions/{id}/export', function (int $id) {
+    $service = app(\App\Services\ExportService::class);
+    $export = $service->exportSession($id);
+    return response()->json($export);
+})->name('api.sessions.export');
+
+Route::get('/exports', function () {
+    $service = app(\App\Services\ExportService::class);
+    return response()->json($service->listExports());
+})->name('api.exports.list');
+
