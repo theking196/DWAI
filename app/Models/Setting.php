@@ -190,3 +190,96 @@ class Setting extends Model
             'session_timeout_minutes' => self::getInt('security.session_timeout', 480),
         ];
     }
+
+    // ============================================================
+    // AI Provider Switching
+    // ============================================================
+
+    public static function configureAIProvider(string $type, string $provider, array $config = []): void
+    {
+        self::set("ai.{$type}_provider", $provider, 'string');
+        
+        // Store provider-specific config
+        if (!empty($config)) {
+            self::set("ai.{$type}_config", $config, 'json');
+        }
+    }
+
+    public static function getAIProvider(string $type): string
+    {
+        return self::get("ai.{$type}_provider", 'mock');
+    }
+
+    public static function getAIProviderConfig(string $type): array
+    {
+        return self::getJson("ai.{$type}_config", []);
+    }
+
+    public static function setProviderAPIKey(string $provider, string $key): void
+    {
+        self::set("ai.{$provider}_key", $key, 'string');
+    }
+
+    public static function getProviderAPIKey(string $provider): ?string
+    {
+        $key = self::get("ai.{$provider}_key");
+        return $key ?: null;
+    }
+
+    public static function isProviderConfigured(string $type): bool
+    {
+        $provider = self::getAIProvider($type);
+        
+        if ($provider === 'mock') return true;
+        
+        // Check if API key exists for real providers
+        $key = self::getProviderAPIKey($provider);
+        return !empty($key);
+    }
+
+    /**
+     * Pre-configured provider presets.
+     */
+    public static function useMockProviders(): void
+    {
+        self::set('ai.text_provider', 'mock');
+        self::set('ai.image_provider', 'mock');
+        self::set('ai.storyboard_provider', 'mock');
+    }
+
+    public static function useOpenAI(string $apiKey, string $model = 'gpt-4'): void
+    {
+        self::configureAIProvider('text', 'openai', ['model' => $model]);
+        self::setProviderAPIKey('openai', $apiKey);
+    }
+
+    public static function useReplicate(string $apiKey, string $model = 'sdxl'): void
+    {
+        self::configureAIProvider('image', 'replicate', ['model' => $model]);
+        self::setProviderAPIKey('replicate', $apiKey);
+    }
+
+    // ============================================================
+    // Provider Status
+    // ============================================================
+
+    public static function getProviderStatus(): array
+    {
+        return [
+            'text' => [
+                'provider' => self::getAIProvider('text'),
+                'configured' => self::isProviderConfigured('text'),
+                'config' => self::getAIProviderConfig('text'),
+            ],
+            'image' => [
+                'provider' => self::getAIProvider('image'),
+                'configured' => self::isProviderConfigured('image'),
+                'config' => self::getAIProviderConfig('image'),
+            ],
+            'storyboard' => [
+                'provider' => self::getAIProvider('storyboard'),
+                'configured' => self::isProviderConfigured('storyboard'),
+                'config' => self::getAIProviderConfig('storyboard'),
+            ],
+        ];
+    }

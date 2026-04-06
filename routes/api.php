@@ -1130,3 +1130,28 @@ Route::get('/settings/status', function () {
     ]);
 })->name('api.settings.status');
 
+
+
+# AI Provider management
+Route::get('/settings/providers', function () {
+    return response()->json(\App\Models\Setting::getProviderStatus());
+})->name('api.settings.providers');
+
+Route::post('/settings/providers/{type}', function (Illuminate\Http\Request $request, string $type) {
+    $request->validate(['provider' => 'required|string', 'config' => 'nullable|array']);
+    \App\Models\Setting::configureAIProvider($type, $request->provider, $request->config ?? []);
+    return response()->json(['success' => true, 'provider' => $request->provider]);
+})->name('api.settings.set-provider');
+
+Route::post('/settings/providers/{type}/key', function (Illuminate\Http\Request $request, string $type) {
+    $request->validate(['key' => 'required|string']);
+    $provider = \App\Models\Setting::getAIProvider($type);
+    \App\Models\Setting::setProviderAPIKey($provider, $request->key);
+    return response()->json(['success' => true]);
+})->name('api.settings.set-key');
+
+Route::post('/settings/providers/use-mock', function () {
+    \App\Models\Setting::useMockProviders();
+    return response()->json(['success' => true]);
+})->name('api.settings.use-mock');
+
