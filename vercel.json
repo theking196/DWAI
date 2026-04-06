@@ -1,0 +1,24 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.schema.json",
+  "builds": [
+    {
+      "src": "public/index.php",
+      "use": "@vercel/php@0.2.0",
+      "config": {
+        "phpVersion": "8.2"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/public/index.php"
+    }
+  ],
+  "env": {
+    "APP_ENV": "production",
+    "APP_DEBUG": "false",
+    "APP_KEY": "base64:dH9kQvzPJVLxR2eFmK8N4pW6cY1bA0sE5hQ9rT3uI4=",
+    "LOG_CHANNEL": "stderr"
+  }
+}
