@@ -138,3 +138,104 @@ class ActivityLog extends Model
             'entity_type' => 'canon',
         ]);
     }
+
+    // ============================================================
+    // Detailed Log Entry
+    // ============================================================
+
+    /**
+     * Get full details for audit trail.
+     */
+    public function getAuditDetails(): array
+    {
+        return [
+            'id' => $this->id,
+            'who' => [
+                'user_id' => $this->user_id,
+            ],
+            'when' => [
+                'created_at' => $this->created_at->toISOString(),
+                'timestamp' => $this->created_at->timestamp,
+            ],
+            'what' => [
+                'event_type' => $this->event_type,
+                'entity_type' => $this->entity_type,
+                'entity_id' => $this->entity_id,
+                'project_id' => $this->project_id,
+            ],
+            'description' => $this->description,
+            'metadata' => $this->metadata,
+        ];
+    }
+
+    /**
+     * Get entity details (the affected object).
+     */
+    public function getEntityDetails(): ?array
+    {
+        if (!$this->entity_type || !$this->entity_id) {
+            return null;
+        }
+
+        $entity = match($this->entity_type) {
+            'project' => Project::find($this->entity_id),
+            'session' => Session::find($this->entity_id),
+            'canon' => CanonEntry::find($this->entity_id),
+            'reference' => ReferenceImage::find($this->entity_id),
+            'output' => AIOutput::find($this->entity_id),
+            'conflict' => Conflict::find($this->entity_id),
+            'timeline' => TimelineEvent::find($this->entity_id),
+            default => null,
+        };
+
+        if (!$entity) return null;
+
+        return [
+            'type' => $this->entity_type,
+            'id' => $this->entity_id,
+            'name' => $entity->name ?? $entity->title ?? "Entity #{$this->entity_id}",
+        ];
+    }
+
+    /**
+     * Format as human-readable audit entry.
+     */
+    public function toAuditString(): string
+    {
+        $when = $this->created_at->format('Y-m-d H:i:s');
+        $what = $this->getEntityDetails();
+        $entity = $what ? " [{$what['type']}: {$what['name']}]" : '';
+
+        return "{$when} | {$this->event_type}{$entity} | {$this->description}";
+    }
+
+    /**
+     * Search by event type.
+     */
+    public static function byEventType(string $eventType, ?int $projectId = null, int $limit = 50): \Illuminate\Database\Eloquent\Collection
+    {
+        $query = static::where('event_type', $eventType);
+        
+        if ($projectId) {
+            $query->where('project_id', $projectId);
+        }
+        
+        return $query->orderBy('created_at', 'desc')->limit($limit)->get();
+    }
+
+    /**
+     * Get timeline for entity.
+     */
+    public static function getEntityTimeline(string $type, int $id): array
+    {
+        return static::where('entity_type', $type)
+            ->where('entity_id', $id)
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(fn($a) => [
+                'when' => $a->created_at->toISOString(),
+                'event' => $a->event_type,
+                'description' => $a->description,
+            ])
+            ->toArray();
+    }
