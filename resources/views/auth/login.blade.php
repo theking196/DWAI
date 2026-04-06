@@ -3,138 +3,189 @@
 @section('title', 'Login - DWAI Studio')
 
 @section('content')
-<div class="auth-container">
-    <div class="auth-card">
-        <div class="auth-header">
-            <h1>DWAI Studio</h1>
-            <p>Private AI Development Environment</p>
-        </div>
-
-        <form method="POST" action="{{ route('login') }}" class="auth-form">
-            @csrf
-
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" 
-                       name="email" 
-                       id="email" 
-                       value="{{ old('email') }}"
-                       required 
-                       autofocus
-                       autocomplete="email">
-                @error('email')
-                    <span class="error">{{ $message }}</span>
-                @enderror
+<div class="login-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo">🎬</div>
+                <h1>DWAI Studio</h1>
+                <p>AI Development Environment</p>
             </div>
 
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" 
-                       name="password" 
-                       id="password" 
-                       required
-                       autocomplete="current-password">
-                @error('password')
-                    <span class="error">{{ $message }}</span>
-                @enderror
+            <form method="POST" action="{{ route('login') }}" class="login-form">
+                @csrf
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" 
+                           name="email" 
+                           id="email" 
+                           value="{{ old('email') }}"
+                           required 
+                           autofocus
+                           autocomplete="email"
+                           placeholder="Enter your email">
+                    @error('email')
+                        <span class="error">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" 
+                           name="password" 
+                           id="password" 
+                           required
+                           autocomplete="current-password"
+                           placeholder="Enter your password">
+                    @error('password')
+                        <span class="error">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="form-row">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="remember" id="remember">
+                        <span>Remember me</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <p>🔒 Private local environment</p>
             </div>
-
-            <div class="form-group checkbox">
-                <input type="checkbox" name="remember" id="remember">
-                <label for="remember">Remember me</label>
-            </div>
-
-            <button type="submit" class="btn btn-primary w-full">
-                Sign In
-            </button>
-        </form>
-
-        <div class="auth-footer">
-            <p class="muted">🔒 Private local environment</p>
         </div>
     </div>
 </div>
 
 <style>
-.auth-container {
+.login-page {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--dark-bg);
+    background: linear-gradient(135deg, #0a0e17 0%, #0d1524 50%, #131d30 100%);
+    padding: 20px;
 }
 
-.auth-card {
+.login-card {
     width: 100%;
-    max-width: 400px;
-    padding: var(--space-xl);
-    background: var(--panel-bg);
-    border: 1px solid var(--panel-border);
-    border-radius: var(--radius-lg);
+    max-width: 420px;
+    background: #131d30;
+    border: 1px solid #1e2d45;
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-.auth-header {
+.login-header {
     text-align: center;
-    margin-bottom: var(--space-xl);
+    margin-bottom: 32px;
 }
 
-.auth-header h1 {
-    font-size: 1.5rem;
-    margin-bottom: var(--space-xs);
+.logo {
+    font-size: 48px;
+    margin-bottom: 16px;
 }
 
-.auth-header p {
-    font-size: 0.875rem;
-    color: var(--text-muted);
+.login-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    color: #ff6b35;
 }
 
-.auth-form .form-group {
-    margin-bottom: var(--space-md);
+.login-header p {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0;
 }
 
-.auth-form label {
+.login-form .form-group {
+    margin-bottom: 20px;
+}
+
+.login-form label {
     display: block;
-    margin-bottom: var(--space-xs);
-    font-size: 0.875rem;
+    margin-bottom: 8px;
+    font-size: 14px;
     font-weight: 500;
+    color: #94a3b8;
 }
 
-.auth-form input[type="email"],
-.auth-form input[type="password"] {
+.login-form input[type="email"],
+.login-form input[type="password"] {
     width: 100%;
-    padding: var(--space-sm) var(--space-md);
-    background: var(--dark-surface);
-    border: 1px solid var(--panel-border);
-    border-radius: var(--radius-md);
-    color: var(--text-primary);
+    padding: 14px 16px;
+    background: #0a0e17;
+    border: 1px solid #1e2d45;
+    border-radius: 8px;
+    color: #f0f4f8;
+    font-size: 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.auth-form input:focus {
+.login-form input::placeholder {
+    color: #64748b;
+}
+
+.login-form input:focus {
     outline: none;
-    border-color: var(--accent-orange);
+    border-color: #ff6b35;
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.15);
 }
 
-.auth-form .checkbox {
+.login-form .error {
+    color: #ef4444;
+    font-size: 12px;
+    margin-top: 6px;
+    display: block;
+}
+
+.form-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.checkbox-label {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #94a3b8;
 }
 
-.auth-form .checkbox input {
-    width: auto;
+.checkbox-label input {
+    width: 18px;
+    height: 18px;
+    accent-color: #ff6b35;
 }
 
-.auth-form .error {
-    color: var(--error);
-    font-size: 0.75rem;
-    margin-top: var(--space-xs);
+.btn-block {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 600;
 }
 
-.auth-footer {
+.login-footer {
     text-align: center;
-    margin-top: var(--space-lg);
-    padding-top: var(--space-lg);
-    border-top: 1px solid var(--panel-border);
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #1e2d45;
+}
+
+.login-footer p {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0;
 }
 </style>
 @endsection
