@@ -19,8 +19,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        parent::boot();
-        
         // Register embedding observers - auto-update vectors on changes
         CanonEntry::observe(CanonObserver::class);
         ReferenceImage::observe(ReferenceImageObserver::class);
