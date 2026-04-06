@@ -354,3 +354,35 @@ class Setting extends Model
             'promotion' => self::getPromotionConfig(),
         ];
     }
+
+    // ============================================================
+    // External AI Provider Support
+    // ============================================================
+
+    public static function initDefaultProviders(): void
+    {
+        // OpenRouter models
+        self::set('ai.openrouter_models', [
+            'google/gemini-2.0-flash-001',
+            'anthropic/claude-3.5-sonnet',
+            'meta/llama-3.3-70b-instruct',
+            'mistralai/mistral-7b-instruct',
+        ], 'json');
+
+        // Groq models
+        self::set('ai.groq_models', [
+            'llama-3.3-70b-versatile',
+            'llama-3.1-70b-versatile',
+            'mixtral-8x7b-32768',
+            'gemma2-9b-it',
+        ], 'json');
+    }
+
+    public static function getAvailableProviders(): array
+    {
+        return [
+            'mock' => ['name' => 'Mock (Dev)', 'models' => ['mock-v1']],
+            'openrouter' => ['name' => 'OpenRouter', 'models' => self::getJson('ai.openrouter_models', [])],
+            'groq' => ['name' => 'Groq', 'models' => self::getJson('ai.groq_models', [])],
+        ];
+    }
