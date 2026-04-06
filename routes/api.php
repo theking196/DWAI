@@ -1418,3 +1418,11 @@ Route::post('/dwai/assistant/{sessionId}/handle', [App\Http\Controllers\DWAI\Ass
 Route::get('/dwai/assistant/{sessionId}/state', [App\Http\Controllers\DWAI\AssistantController::class, 'state']);
 Route::post('/dwai/assistant/{sessionId}/reset', [App\Http\Controllers\DWAI\AssistantController::class, 'reset']);
 
+
+
+# Progressive Session Routes
+Route::post('/dwai/progressive/{sessionId}/handle', [App\Http\Controllers\DWAI\ProgressiveSessionController::class, 'handle']);
+Route::get('/dwai/progressive/{sessionId}/state', [App\Http\Controllers\DWAI\ProgressiveSessionController::class, 'state']);
+Route::post('/dwai/progressive/{sessionId}/next', [App\Http\Controllers\DWAI\ProgressiveSessionController::class, 'next']);
+Route::post('/dwai/progressive/{sessionId}/refine', [App\Http\Controllers\DWAI\ProgressiveSessionController::class, 'refine']);
+
