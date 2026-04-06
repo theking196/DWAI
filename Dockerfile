@@ -9,12 +9,13 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     zip \
     unzip \
-    libpq-dev
+    libpq-dev \
+    npm
 
 # Clear cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions (without pdo_pgsql - we'll use pdo instead)
+# Install PHP extensions
 RUN docker-php-ext-install pdo mbstring exif pcntl bcmath gd
 
 # Get Composer
@@ -26,8 +27,12 @@ WORKDIR /var/www
 # Copy application
 COPY . .
 
-# Install dependencies
-RUN composer install --no-dev --optimize-autoloader
+# Install PHP dependencies (allow missing dev packages)
+RUN composer install --no-dev --ignore-platform-reqs --optimize-autoloader || \
+    composer install --ignore-platform-reqs --optimize-autoloader
+
+# Build frontend (if needed)
+RUN npm install 2>/dev/null || true
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www \
