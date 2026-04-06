@@ -1233,3 +1233,24 @@ Route::get('/exports', function () {
     return response()->json($service->listExports());
 })->name('api.exports.list');
 
+
+
+# Scheduled backup
+Route::get('/settings/backup-schedule', function () {
+    return response()->json(app(\App\Services\ScheduledBackupService::class)->getSchedule());
+})->name('api.settings.backup-schedule');
+
+Route::post('/settings/backup-schedule', function (Illuminate\Http\Request $request) {
+    app(\App\Services\ScheduledBackupService::class)->configure($request->all());
+    return response()->json(['success' => true]);
+})->name('api.settings.configure-backup');
+
+Route::post('/backup/trigger', function () {
+    $result = app(\App\Services\ScheduledBackupService::class)->triggerManual(auth()->id());
+    return response()->json($result);
+})->name('api.backup.trigger');
+
+Route::get('/backup/cron', function () {
+    return response()->json(['cron' => app(\App\Services\ScheduledBackupService::class)->getCronExpression()]);
+})->name('api.backup.cron');
+
