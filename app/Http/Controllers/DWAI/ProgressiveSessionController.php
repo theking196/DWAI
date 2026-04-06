@@ -44,15 +44,9 @@ class ProgressiveSessionController extends Controller
         $currentIndex = $session->current_step_index ?? 0;
         $steps = $session->build_steps ?? [];
         $outputs = $session->build_outputs ?? [];
-
-        // Handle actions
-        match($action) {
-            'refine' => $this->handleRefine($session, $currentIndex, $feedback, $steps, $outputs),
-            'reset' => $this->handleReset($session),
-            default => $this->handleNext($session, $currentIndex, $userInput, $steps, $outputs),
-        };
-
-        return $this->buildResponse($session, $steps, $outputs);
+        
+        // Get current step name from structured array
+        $currentStep = is_array($steps[$currentIndex] ?? null) ? ($steps[$currentIndex]['name'] ?? null) : ($steps[$currentIndex] ?? null);
     }
 
     /**
@@ -60,33 +54,72 @@ class ProgressiveSessionController extends Controller
      */
     protected function initializeSteps(Session $session, string $input): void
     {
-        $length = strlen($input);
         $wordCount = str_word_count($input);
+        $steps = $this->generateStepsForComplexity($wordCount);
         
-        // Determine complexity and number of steps
-        $stepCount = match(true) {
-            $wordCount < 20 => 3,
-            $wordCount < 50 => 5,
-            $wordCount < 100 => 7,
-            default => min(10, max(5, (int)($wordCount / 20))),
-        };
-
-        // Generate step definitions
-        $stepTypes = ['concept', 'characters', 'setting', 'plot', 'conflict', 'resolution', 'emotion', 'visuals', 'audio', 'final'];
-        $steps = array_slice($stepTypes, 0, $stepCount);
-        
-        // Add any missing essential steps
-        if (!in_array('characters', $steps)) $steps[] = 'characters';
-        if (!in_array('visuals', $steps)) $steps[] = 'visuals';
-        if (!in_array('final', $steps)) $steps[] = 'final';
+        // Convert to structured format with status
+        $structuredSteps = array_map(fn($name) => [
+            'name' => $name,
+            'status' => 'pending',
+        ], $steps);
 
         $session->update([
-            'build_steps' => array_values($steps),
+            'build_steps' => $structuredSteps,
             'current_step_index' => 0,
             'build_outputs' => [],
         ]);
 
-        Log::info('Progressive steps initialized', ['session_id' => $session->id, 'steps' => count($steps)]);
+        Log::info('Progressive steps initialized', ['session_id' => $session->id, 'steps' => count($structuredSteps), 'complexity' => $this->getComplexityLabel($wordCount)]);
+    }
+
+    /**
+     * Generate steps based on input complexity.
+     */
+    protected function generateStepsForComplexity(int $wordCount): array
+    {
+        // Short input: < 30 words
+        if ($wordCount < 30) {
+            return [
+                'Concept Development',
+                'Main Visual',
+                'Final Output',
+            ];
+        }
+
+        // Medium input: 30-100 words
+        if ($wordCount < 100) {
+            return [
+                'Concept Development',
+                'Character Design',
+                'Environment Building',
+                'Key Scene',
+                'Action Sequence',
+                'Final Output',
+            ];
+        }
+
+        // Long input: > 100 words
+        return [
+            'Concept Breakdown',
+            'Multiple Characters',
+            'Multiple Environments',
+            'Scene Progression',
+            'Cinematic Shots',
+            'Emotional Tone',
+            'Final Output',
+        ];
+    }
+
+    /**
+     * Get complexity label for logging.
+     */
+    protected function getComplexityLabel(int $wordCount): string
+    {
+        return match(true) {
+            $wordCount < 30 => 'short',
+            $wordCount < 100 => 'medium',
+            default => 'long',
+        };
     }
 
     /**
@@ -94,7 +127,8 @@ class ProgressiveSessionController extends Controller
      */
     protected function handleNext(Session $session, int $index, string $input, array $steps, array $outputs): void
     {
-        $currentStep = $steps[$index] ?? null;
+        $stepData = $steps[$index] ?? null;
+        $currentStep = is_array($stepData) ? ($stepData['name'] ?? null) : $stepData;
         
         if (!$currentStep) {
             return;
@@ -110,7 +144,11 @@ class ProgressiveSessionController extends Controller
             // Save output
             $outputs[$currentStep] = $result;
             
+            // Update step status
+            $steps[$index]['status'] = 'completed';
+            
             $session->update([
+                'build_steps' => $steps,
                 'build_outputs' => $outputs,
             ]);
         } catch (\Exception $e) {
@@ -125,7 +163,8 @@ class ProgressiveSessionController extends Controller
      */
     protected function handleRefine(Session $session, int $index, string $feedback, array $steps, array $outputs): void
     {
-        $currentStep = $steps[$index] ?? null;
+        $stepData = $steps[$index] ?? null;
+        $currentStep = is_array($stepData) ? ($stepData['name'] ?? null) : $stepData;
         
         if (!$currentStep || empty($feedback)) {
             return;
