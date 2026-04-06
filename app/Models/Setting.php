@@ -283,3 +283,74 @@ class Setting extends Model
             ],
         ];
     }
+
+    // ============================================================
+    // Default Behavior Settings
+    // ============================================================
+
+    public static function initBehaviorDefaults(): void
+    {
+        // Default Project
+        self::set('behavior.default_project', null, 'integer');
+        
+        // Default Visual Style
+        self::set('behavior.default_style_id', null, 'integer');
+        self::set('behavior.apply_style_to_sessions', true, 'boolean');
+        
+        // Auto-save
+        self::set('behavior.auto_save_enabled', true, 'boolean');
+        self::set('behavior.auto_save_interval_seconds', 30, 'integer');
+        self::set('behavior.auto_save_draft', true, 'boolean');
+        
+        // Conflict Detection
+        self::set('behavior.conflict_strictness', 'warning', 'string'); // error, warning, info, off
+        self::set('behavior.auto_resolve_low_severity', false, 'boolean');
+        
+        // Memory Promotion
+        self::set('behavior.promotion_requires_review', true, 'boolean');
+        self::set('behavior.auto_promote_patterns', false, 'boolean');
+        self::set('behavior.default_promotion_importance', 'minor', 'string'); // minor, moderate, important
+    }
+
+    public static function getDefaultProject(): ?int
+    {
+        return self::getInt('behavior.default_project');
+    }
+
+    public static function setDefaultProject(int $projectId): void
+    {
+        self::set('behavior.default_project', $projectId, 'integer');
+    }
+
+    public static function getAutoSaveConfig(): array
+    {
+        return [
+            'enabled' => self::getBool('behavior.auto_save_enabled', true),
+            'interval_seconds' => self::getInt('behavior.auto_save_interval_seconds', 30),
+            'save_draft' => self::getBool('behavior.auto_save_draft', true),
+        ];
+    }
+
+    public static function getConflictStrictness(): string
+    {
+        return self::get('behavior.conflict_strictness', 'warning');
+    }
+
+    public static function getPromotionConfig(): array
+    {
+        return [
+            'requires_review' => self::getBool('behavior.promotion_requires_review', true),
+            'auto_promote' => self::getBool('behavior.auto_promote_patterns', false),
+            'default_importance' => self::get('behavior.default_promotion_importance', 'minor'),
+        ];
+    }
+
+    public static function getBehaviorConfig(): array
+    {
+        return [
+            'default_project' => self::getDefaultProject(),
+            'auto_save' => self::getAutoSaveConfig(),
+            'conflict_strictness' => self::getConflictStrictness(),
+            'promotion' => self::getPromotionConfig(),
+        ];
+    }

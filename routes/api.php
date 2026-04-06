@@ -1155,3 +1155,33 @@ Route::post('/settings/providers/use-mock', function () {
     return response()->json(['success' => true]);
 })->name('api.settings.use-mock');
 
+
+
+# Behavior settings
+Route::get('/settings/behavior', function () {
+    return response()->json(\App\Models\Setting::getBehaviorConfig());
+})->name('api.settings.behavior');
+
+Route::post('/settings/behavior/default-project', function (Illuminate\Http\Request $request) {
+    \App\Models\Setting::setDefaultProject($request->project_id);
+    return response()->json(['success' => true]);
+})->name('api.settings.set-default-project');
+
+Route::post('/settings/behavior/auto-save', function (Illuminate\Http\Request $request) {
+    if ($request->has('enabled')) \App\Models\Setting::set('behavior.auto_save_enabled', $request->enabled, 'boolean');
+    if ($request->has('interval')) \App\Models\Setting::set('behavior.auto_save_interval_seconds', $request->interval, 'integer');
+    return response()->json(\App\Models\Setting::getAutoSaveConfig());
+})->name('api.settings.auto-save');
+
+Route::post('/settings/behavior/conflict-strictness', function (Illuminate\Http\Request $request) {
+    $request->validate(['level' => 'required|in:error,warning,info,off']);
+    \App\Models\Setting::set('behavior.conflict_strictness', $request->level);
+    return response()->json(['strictness' => $request->level]);
+})->name('api.settings.conflict-strictness');
+
+Route::post('/settings/behavior/promotion', function (Illuminate\Http\Request $request) {
+    if ($request->has('requires_review')) \App\Models\Setting::set('behavior.promotion_requires_review', $request->requires_review, 'boolean');
+    if ($request->has('auto_promote')) \App\Models\Setting::set('behavior.auto_promote_patterns', $request->auto_promote, 'boolean');
+    return response()->json(\App\Models\Setting::getPromotionConfig());
+})->name('api.settings.promotion');
+
